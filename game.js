@@ -40,6 +40,7 @@ exports.Game = void 0;
 var deck_1 = require("./deck");
 var card_1 = require("./card");
 var simpleAIplayer_1 = require("./simpleAIplayer");
+var humanPlayer_1 = require("./humanPlayer");
 var colorize_1 = require("./colorize");
 var returncodes_1 = require("./returncodes");
 var Game = /** @class */ (function () {
@@ -331,6 +332,16 @@ var Game = /** @class */ (function () {
         var card = this.leftoverCard;
         return card;
     };
+    Game.prototype.getActivePlayers = function () {
+        return this.players
+            .filter(function (p) { return !p.outOfThisRound; })
+            .map(function (p) { return ({
+            id: p.playerId,
+            name: p.playerName,
+            protected: p.protectedForOneRound,
+            discards: p.discards.map(function (d) { return ({ name: d.getCardName(), value: d.getCardValue() }); })
+        }); });
+    };
     Game.prototype.resolveEndOfRound = function () {
         // check for win
         this.gameStarted = false;
@@ -393,8 +404,9 @@ var Game = /** @class */ (function () {
 exports.Game = Game;
 ;
 var game = new Game(4);
-game.addPlayer(new simpleAIplayer_1.SimpleAIPlayer(game, 0, "Frank"));
+game.addPlayer(new humanPlayer_1.HumanCLIPlayer(game, 0, "Player"));
 game.addPlayer(new simpleAIplayer_1.SimpleAIPlayer(game, 1, "Bob"));
 game.addPlayer(new simpleAIplayer_1.SimpleAIPlayer(game, 2, "Malice"));
 game.addPlayer(new simpleAIplayer_1.SimpleAIPlayer(game, 3, "Angreta"));
 game.start();
+//# sourceMappingURL=game.js.map

@@ -11,3 +11,4 @@ exports.ReturnCodes = {
     MUST_CHOOSE_TARGET: 6,
     TARGET_OUT_OF_ROUND: 7,
 };
+//# sourceMappingURL=returncodes.js.map

@@ -137,3 +137,4 @@ var SimpleAIPlayer = /** @class */ (function (_super) {
     return SimpleAIPlayer;
 }(player_1.Player));
 exports.SimpleAIPlayer = SimpleAIPlayer;
+//# sourceMappingURL=simpleAIplayer.js.map

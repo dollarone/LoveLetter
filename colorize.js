@@ -39,3 +39,4 @@ exports.colorize = new (/** @class */ (function () {
     }
     return class_1;
 }()))();
+//# sourceMappingURL=colorize.js.map

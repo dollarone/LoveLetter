@@ -3,6 +3,7 @@ import { Player } from './player';
 import { Deck } from './deck';
 import { Card } from './card';
 import { SimpleAIPlayer } from './simpleAIplayer';
+import { HumanCLIPlayer } from './humanPlayer';
 import { colorize } from './colorize';
 import { ReturnCodes } from './returncodes';
 
@@ -306,6 +307,17 @@ export class Game {
         return card;
     }
 
+    getActivePlayers(): Array<{ id: number, name: string, protected: boolean, discards: Array<{ name: string, value: number }> }> {
+        return this.players
+            .filter(p => !p.outOfThisRound)
+            .map(p => ({
+                id: p.playerId,
+                name: p.playerName,
+                protected: p.protectedForOneRound,
+                discards: p.discards.map(d => ({ name: d.getCardName(), value: d.getCardValue() }))
+            }));
+    }
+
     resolveEndOfRound() {
         // check for win
         this.gameStarted = false;
@@ -366,7 +378,7 @@ export class Game {
 };
 
 let game = new Game(4);
-game.addPlayer(new SimpleAIPlayer(game, 0, "Frank"));
+game.addPlayer(new HumanCLIPlayer(game, 0, "Player"));
 game.addPlayer(new SimpleAIPlayer(game, 1, "Bob"));
 game.addPlayer(new SimpleAIPlayer(game, 2, "Malice"));
 game.addPlayer(new SimpleAIPlayer(game, 3, "Angreta"));

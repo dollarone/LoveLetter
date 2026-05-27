@@ -58,3 +58,4 @@ var Player = /** @class */ (function () {
 }());
 exports.Player = Player;
 ;
+//# sourceMappingURL=player.js.map
