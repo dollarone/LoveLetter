@@ -28,7 +28,11 @@ export abstract class Player {
         this.cardTwo = null;
         this.discards = [];
         this.outOfThisRound = false;
-        console.log(`${this.playerName} drew starting card: ${this.cardOne.getCardName()}`);
+        if (this.isHuman()) {
+            console.log(`You drew your starting card: ${this.cardOne.getCardName()}`);
+        } else {
+            console.log(`${this.playerName} draws their starting card.`);
+        }
     }
 
     itsYourTurn() {
@@ -43,12 +47,20 @@ export abstract class Player {
         if (!this.game.isTheDeckEmpty()) {
 
             this.cardOne = this.game.drawCard(this);
-            console.log(`${this.playerName} discarded ${cardToDiscard.getCardName()} and drew a new card: ${this.cardOne.getCardName()}`);
+            if (this.isHuman()) {
+                console.log(`You discarded ${cardToDiscard.getCardName()} and drew: ${this.cardOne.getCardName()}`);
+            } else {
+                console.log(`${this.playerName} discarded ${cardToDiscard.getCardName()} and draws a new card.`);
+            }
         }
         else {
             console.log("No more cards in deck - drawing leftover card");
             this.cardOne = this.game.drawLeftover(this);
-            console.log(`${this.playerName} drew card: ${this.cardOne.getCardName()}`);
+            if (this.isHuman()) {
+                console.log(`You drew the leftover card: ${this.cardOne.getCardName()}`);
+            } else {
+                console.log(`${this.playerName} drew the leftover card.`);
+            }
         }
     }
 
@@ -58,11 +70,16 @@ export abstract class Player {
             this.cardTwo = this.game.drawCard(this);
             if (this.cardTwo == null) {
                 console.log("No more cards to draw");
-            }
-            else {
-                console.log(`${this.playerName} drew card: ${this.cardTwo.getCardName()}`);
+            } else if (this.isHuman()) {
+                console.log(`You drew: ${this.cardTwo.getCardName()}`);
+            } else {
+                console.log(`${this.playerName} draws a card.`);
             }
         }
+    }
+
+    isHuman(): boolean {
+        return false;
     }
 
     playCard() {

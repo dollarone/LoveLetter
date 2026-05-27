@@ -11,6 +11,10 @@ export class HumanCLIPlayer extends Player {
         this.playerId = id;
     }
 
+    isHuman(): boolean {
+        return true;
+    }
+
     itsYourTurn() {
         this.drawCard();
         let code: number = this.game.playCard(this);

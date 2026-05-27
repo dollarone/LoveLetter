@@ -85,7 +85,7 @@ var Game = /** @class */ (function () {
                 this.gameStarted = true;
                 console.log("Game started");
                 this.leftoverCard = this.deck.drawCard();
-                console.log("Leftover card: " + this.leftoverCard.getCardName());
+                console.log("One card is set aside face-down.");
                 this.playersLeft = this.playerCount;
                 for (var i = 0; i < this.playerCount; i++) {
                     this.whoseTurnIsItAnyway = i;
@@ -194,7 +194,7 @@ var Game = /** @class */ (function () {
                 }
                 console.log(this.players[player.playerId].playerName + " wants to play " + cardToBePlayed.getCardName() + " on " + this.players[event_1.target].playerName);
                 if (cardToBePlayed.getCardValue() === 1) {
-                    console.log(player.playerName + " is guessing card value " + event_1.guess + ". " + this.players[event_1.target].playerName + " has card " + this.players[event_1.target].cardOne.getCardName());
+                    console.log(player.playerName + " guesses " + event_1.guess + ".");
                 }
                 this.players[player.playerId].protectedForOneRound = false;
                 switch (cardToBePlayed.getCardValue()) {
@@ -224,7 +224,9 @@ var Game = /** @class */ (function () {
                             return returncodes_1.ReturnCodes.TARGET_PROTECTED;
                         }
                         console.log(colorize_1.colorize.green("Priest") + colorize_1.colorize.white(" played on " + this.players[event_1.target].playerName));
-                        console.log(this.players[event_1.target].playerName + " has a " + this.players[event_1.target].cardOne.getCardName());
+                        if (player.isHuman()) {
+                            console.log(this.players[event_1.target].playerName + " has a " + this.players[event_1.target].cardOne.getCardName());
+                        }
                         break;
                     case 3:
                         if (this.players[event_1.target].protectedForOneRound) {
@@ -232,7 +234,9 @@ var Game = /** @class */ (function () {
                             return returncodes_1.ReturnCodes.TARGET_PROTECTED;
                         }
                         console.log(colorize_1.colorize.cyan("Baron") + colorize_1.colorize.white(" played on " + this.players[event_1.target].playerName));
-                        console.log(player.playerName + " has a " + this.players[player.playerId].cardOne.getCardName() + " and " + this.players[event_1.target].playerName + " has a " + this.players[event_1.target].cardOne.getCardName());
+                        if (player.isHuman()) {
+                            console.log("You have a " + this.players[player.playerId].cardOne.getCardName() + " and " + this.players[event_1.target].playerName + " has a " + this.players[event_1.target].cardOne.getCardName());
+                        }
                         if (this.players[event_1.target].cardOne.getCardValue() > this.players[player.playerId].cardOne.getCardValue()) {
                             console.log(player.playerName + " is out of the round!");
                             this.players[player.playerId].outOfThisRound = true;

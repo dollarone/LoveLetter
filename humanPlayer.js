@@ -61,6 +61,9 @@ var HumanCLIPlayer = /** @class */ (function (_super) {
         _this.playerId = id;
         return _this;
     }
+    HumanCLIPlayer.prototype.isHuman = function () {
+        return true;
+    };
     HumanCLIPlayer.prototype.itsYourTurn = function () {
         this.drawCard();
         var code = this.game.playCard(this);

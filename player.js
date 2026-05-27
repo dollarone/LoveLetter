@@ -21,7 +21,12 @@ var Player = /** @class */ (function () {
         this.cardTwo = null;
         this.discards = [];
         this.outOfThisRound = false;
-        console.log("".concat(this.playerName, " drew starting card: ").concat(this.cardOne.getCardName()));
+        if (this.isHuman()) {
+            console.log("You drew your starting card: ".concat(this.cardOne.getCardName()));
+        }
+        else {
+            console.log("".concat(this.playerName, " draws their starting card."));
+        }
     };
     Player.prototype.itsYourTurn = function () {
         console.log("It's your turn");
@@ -32,12 +37,22 @@ var Player = /** @class */ (function () {
         this.totalDiscardValue += this.cardOne.getCardValue();
         if (!this.game.isTheDeckEmpty()) {
             this.cardOne = this.game.drawCard(this);
-            console.log("".concat(this.playerName, " discarded ").concat(cardToDiscard.getCardName(), " and drew a new card: ").concat(this.cardOne.getCardName()));
+            if (this.isHuman()) {
+                console.log("You discarded ".concat(cardToDiscard.getCardName(), " and drew: ").concat(this.cardOne.getCardName()));
+            }
+            else {
+                console.log("".concat(this.playerName, " discarded ").concat(cardToDiscard.getCardName(), " and draws a new card."));
+            }
         }
         else {
             console.log("No more cards in deck - drawing leftover card");
             this.cardOne = this.game.drawLeftover(this);
-            console.log("".concat(this.playerName, " drew card: ").concat(this.cardOne.getCardName()));
+            if (this.isHuman()) {
+                console.log("You drew the leftover card: ".concat(this.cardOne.getCardName()));
+            }
+            else {
+                console.log("".concat(this.playerName, " drew the leftover card."));
+            }
         }
     };
     Player.prototype.drawCard = function () {
@@ -46,10 +61,16 @@ var Player = /** @class */ (function () {
             if (this.cardTwo == null) {
                 console.log("No more cards to draw");
             }
+            else if (this.isHuman()) {
+                console.log("You drew: ".concat(this.cardTwo.getCardName()));
+            }
             else {
-                console.log("".concat(this.playerName, " drew card: ").concat(this.cardTwo.getCardName()));
+                console.log("".concat(this.playerName, " draws a card."));
             }
         }
+    };
+    Player.prototype.isHuman = function () {
+        return false;
     };
     Player.prototype.playCard = function () {
         return "";
