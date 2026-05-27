@@ -1,76 +1,602 @@
-<html ng-app="app">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <script type="text/javascript">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Love Letter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    var myWebSocket;
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 1.3rem; color: #e94560; letter-spacing: 2px; }
+  #status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #666; display: inline-block; margin-right: 8px;
+  }
+  #status-dot.connected { background: #4caf50; }
+  #status-text { font-size: 0.85rem; color: #999; }
+  #btn-new-game {
+    padding: 8px 18px; border: none; border-radius: 6px;
+    background: #e94560; color: #fff; font-size: 0.9rem;
+    cursor: pointer; transition: background 0.2s;
+  }
+  #btn-new-game:hover { background: #c73652; }
+  #btn-new-game:disabled { background: #555; cursor: default; }
 
-    function connectToWS() {
-        var endpoint = document.getElementById("endpoint").value;
-        if (myWebSocket !== undefined) {
-            myWebSocket.close()
-        }
+  /* ── Main area ── */
+  main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    gap: 0;
+  }
 
-        myWebSocket = new WebSocket(endpoint);
+  /* ── Game log ── */
+  #log-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #0f3460;
+    overflow: hidden;
+  }
+  #log-panel h2 { padding: 8px 14px; font-size: 0.8rem; text-transform: uppercase; color: #888; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
+  #log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  #log .entry { padding: 2px 0; border-bottom: 1px solid #1e2a45; }
+  #log .entry:last-child { border-bottom: none; }
+  #log .sep { color: #444; }
+  #log .highlight { color: #e94560; }
 
-        myWebSocket.onmessage = function(event) {
-            var leng;
-            if (event.data.size === undefined) {
-                leng = event.data.length
-            } else {
-                leng = event.data.size
-            }
-            console.log("onmessage. size: " + leng + ", content: " + event.data);
-        }
+  /* ── Players panel ── */
+  #players-panel {
+    width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #0f3460;
+    overflow: hidden;
+  }
+  #players-panel h2 { padding: 8px 14px; font-size: 0.8rem; text-transform: uppercase; color: #888; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
+  #players-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .player-card {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+    transition: opacity 0.3s;
+  }
+  .player-card.self { border-color: #e94560; }
+  .player-card.eliminated { opacity: 0.35; }
+  .player-card .p-name { font-weight: bold; margin-bottom: 3px; }
+  .player-card .p-name .badge {
+    display: inline-block; font-size: 0.7rem; padding: 1px 5px;
+    border-radius: 3px; margin-left: 4px; vertical-align: middle;
+  }
+  .badge.protected { background: #1565c0; color: #fff; }
+  .badge.eliminated { background: #555; color: #ccc; }
+  .badge.self-badge { background: #e94560; color: #fff; }
+  .badge.turn { background: #388e3c; color: #fff; }
+  .p-discards { color: #888; font-size: 0.75rem; margin-top: 3px; }
 
-        myWebSocket.onopen = function(evt) {
-            console.log("onopen.");
-        };
+  /* ── Action panel ── */
+  #action-panel {
+    width: 340px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #action-panel h2 { padding: 8px 14px; font-size: 0.8rem; text-transform: uppercase; color: #888; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
+  #action-inner {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
 
-        myWebSocket.onclose = function(evt) {
-            console.log("onclose.");
-        };
+  .action-section h3 { font-size: 0.8rem; text-transform: uppercase; color: #888; margin-bottom: 8px; }
 
-        myWebSocket.onerror = function(evt) {
-            console.log("Error!");
-        };
-    }
+  .card-btn {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    background: #16213e;
+    border: 2px solid #0f3460;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: left;
+    color: #e0e0e0;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 6px;
+  }
+  .card-btn:hover { border-color: #e94560; background: #1e2a45; }
+  .card-btn.selected { border-color: #e94560; background: #1e2a45; }
+  .card-btn.forced { border-color: #f9a825; background: #1e2a45; cursor: default; }
+  .card-btn .card-value {
+    font-size: 1.4rem;
+    font-weight: bold;
+    width: 32px;
+    text-align: center;
+    flex-shrink: 0;
+    color: #e94560;
+  }
+  .card-btn .card-info .card-name { font-weight: bold; font-size: 0.95rem; }
+  .card-btn .card-info .card-desc { font-size: 0.75rem; color: #999; margin-top: 2px; }
 
-    function sendMsg() {
-        var message = document.getElementById("myMessage").value;
-        const event = {type: message};
-        myWebSocket.send(JSON.stringify(event));
-        console.log(message + ' sent');
-    }
-    function createGame() {
-        const event = {type: 'createGame', playerCount: 4};
-        myWebSocket.send(JSON.stringify(event));
-        console.log(event.type + ' sent');
-    }
-    
-    function closeConn() {
-        myWebSocket.close();
-    }
+  .target-btn, .guess-btn {
+    padding: 8px 14px;
+    border: 1px solid #0f3460;
+    border-radius: 6px;
+    background: #16213e;
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s, border-color 0.2s;
+    margin: 3px;
+  }
+  .target-btn:hover, .guess-btn:hover { background: #1e2a45; border-color: #e94560; }
+  .target-btn.protected-target { border-color: #1565c0; color: #90caf9; }
 
-    </script>
+  #waiting-msg {
+    color: #888;
+    font-style: italic;
+    font-size: 0.9rem;
+    padding: 20px 0;
+    text-align: center;
+  }
+
+  #error-box {
+    background: #4a1010;
+    border: 1px solid #e94560;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    color: #ff8a80;
+    display: none;
+  }
+  #error-box.visible { display: block; }
+
+  #forced-draw-box {
+    background: #1a3a1a;
+    border: 1px solid #4caf50;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    color: #a5d6a7;
+    display: none;
+  }
+  #forced-draw-box.visible { display: block; }
+
+  .priest-reveal {
+    background: #1a2a3a;
+    border: 1px solid #1565c0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    color: #90caf9;
+  }
+</style>
 </head>
 <body>
 
-    <form>
-        connection to: <input type="text" id="endpoint" name="endpoint" value="ws://localhost:8080"  style="width: 200px" ><br>
-    </form>
+<header>
+  <h1>♥ LOVE LETTER</h1>
+  <div>
+    <span id="status-dot"></span>
+    <span id="status-text">Connecting…</span>
+  </div>
+  <button id="btn-new-game" disabled>New Game</button>
+</header>
 
-    <input type="button" onclick="connectToWS()" value="connect to WebSocket endpoint" /><br><br>
+<main>
+  <section id="log-panel">
+    <h2>Game Log</h2>
+    <div id="log"></div>
+  </section>
 
-    <form>
-        message: <input type="text" id="myMessage" name="myMessage" value="hi there!"><br>
-    </form>
+  <section id="players-panel">
+    <h2>Players</h2>
+    <div id="players-list"></div>
+  </section>
 
-    <input type="button" onclick="sendMsg()" value="Send message" />
-    <input type="button" onclick="createGame()" value="Create Game" />
+  <section id="action-panel">
+    <h2>Your Turn</h2>
+    <div id="action-inner">
+      <p id="waiting-msg">Start a new game to play.</p>
+    </div>
+  </section>
+</main>
 
-    <input type="button" onclick="closeConn()" value="Close connection" />
+<script>
+// ── Card metadata ──────────────────────────────────────────────────────────
+const CARD_INFO = {
+  1: { name: 'Guard',    color: '#9e9e9e', desc: 'Name a non-Guard card. If correct, that player is out.' },
+  2: { name: 'Priest',   color: '#4caf50', desc: 'Look at another player\'s hand.' },
+  3: { name: 'Baron',    color: '#00bcd4', desc: 'Compare hands privately. Lower card is eliminated.' },
+  4: { name: 'Handmaid', color: '#ffeb3b', desc: 'You are immune until your next turn.' },
+  5: { name: 'Prince',   color: '#2196f3', desc: 'Choose any player (including yourself) to discard and redraw.' },
+  6: { name: 'King',     color: '#64b5f6', desc: 'Trade hands with another player.' },
+  7: { name: 'Countess', color: '#e040fb', desc: 'Must be discarded if you hold the King or Prince.' },
+  8: { name: 'Princess', color: '#f44336', desc: 'If discarded for any reason, you are out.' },
+};
 
+// ── State ──────────────────────────────────────────────────────────────────
+let ws = null;
+let phase = 'lobby';       // lobby | waiting | choosingCard | choosingTarget | choosingGuess | gameOver
+let selfId = 0;
+let pendingCardValue = null;
+let pendingTarget    = null;
+let pendingGuess     = null;
+let activePlayers    = [];
+let allPlayers       = [];
+let deckSize         = 0;
+let cardOne          = null;
+let cardTwo          = null;
+let countessForced   = false;
 
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const logEl        = document.getElementById('log');
+const playersEl    = document.getElementById('players-list');
+const actionInner  = document.getElementById('action-inner');
+const btnNewGame   = document.getElementById('btn-new-game');
+const statusDot    = document.getElementById('status-dot');
+const statusText   = document.getElementById('status-text');
+
+// ── WebSocket ──────────────────────────────────────────────────────────────
+function connect() {
+  ws = new WebSocket('ws://localhost:8080');
+
+  ws.onopen = () => {
+    statusDot.className = 'connected';
+    statusText.textContent = 'Connected';
+    btnNewGame.disabled = false;
+  };
+
+  ws.onclose = () => {
+    statusDot.className = '';
+    statusText.textContent = 'Disconnected — reload to reconnect';
+    btnNewGame.disabled = true;
+    phase = 'lobby';
+    renderAction();
+  };
+
+  ws.onerror = () => {
+    statusText.textContent = 'Connection error';
+  };
+
+  ws.onmessage = (evt) => {
+    const msg = JSON.parse(evt.data);
+    handleMessage(msg);
+  };
+}
+
+function send(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  }
+}
+
+// ── Message handler ────────────────────────────────────────────────────────
+function handleMessage(msg) {
+  switch (msg.type) {
+
+    case 'gameStarted':
+      selfId = msg.selfId;
+      addLog('⚑ Game started — you are ' + msg.players[selfId], 'highlight');
+      phase = 'waiting';
+      pendingCardValue = pendingTarget = pendingGuess = null;
+      renderAction();
+      break;
+
+    case 'log':
+      addLog(msg.message);
+      break;
+
+    case 'stateUpdate':
+      allPlayers = msg.players;
+      deckSize   = msg.deckSize;
+      renderPlayers();
+      break;
+
+    case 'yourTurn':
+      selfId       = msg.selfId;
+      cardOne      = msg.cardOne;
+      cardTwo      = msg.cardTwo;
+      activePlayers = msg.activePlayers;
+      countessForced = msg.countessForced;
+      pendingCardValue = null;
+      pendingTarget    = null;
+      pendingGuess     = null;
+      phase = 'choosingCard';
+      clearError();
+      renderAction();
+      addLog('▶ Your turn.', 'highlight');
+      break;
+
+    case 'error':
+      showError(msg.message);
+      // A new yourTurn will follow — it resets the phase
+      break;
+
+    case 'forcedDraw':
+      showForcedDraw('You discarded and drew: ' + msg.newCard.name + ' (' + msg.newCard.value + ')');
+      break;
+
+    case 'gameOver':
+      phase = 'gameOver';
+      btnNewGame.disabled = false;
+      addLog('⬛ Round over.', 'highlight');
+      renderAction();
+      break;
+  }
+}
+
+// ── Log ────────────────────────────────────────────────────────────────────
+function addLog(text, cls) {
+  if (text.startsWith('——') || text.startsWith('===')) {
+    const sep = document.createElement('div');
+    sep.className = 'entry sep';
+    sep.textContent = text;
+    logEl.appendChild(sep);
+  } else {
+    const div = document.createElement('div');
+    div.className = 'entry' + (cls ? ' ' + cls : '');
+    div.textContent = text;
+    logEl.appendChild(div);
+  }
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ── Players panel ──────────────────────────────────────────────────────────
+function renderPlayers() {
+  if (!allPlayers.length) { playersEl.innerHTML = ''; return; }
+  playersEl.innerHTML = allPlayers.map(p => {
+    const isSelf = p.id === selfId;
+    const discStr = p.discards.length
+      ? p.discards.map(d => d.name + '(' + d.value + ')').join(', ')
+      : '—';
+    const badges = [];
+    if (isSelf) badges.push('<span class="badge self-badge">You</span>');
+    if (p.protected)  badges.push('<span class="badge protected">Shielded</span>');
+    if (p.eliminated) badges.push('<span class="badge eliminated">Out</span>');
+    return `
+      <div class="player-card ${isSelf ? 'self' : ''} ${p.eliminated ? 'eliminated' : ''}">
+        <div class="p-name">${p.name}${badges.join('')}</div>
+        <div class="p-discards">Discards: ${discStr}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Action panel ───────────────────────────────────────────────────────────
+function clearError() {
+  const box = document.getElementById('error-box');
+  if (box) { box.className = ''; box.textContent = ''; }
+}
+
+function showError(msg) {
+  let box = document.getElementById('error-box');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'error-box';
+    actionInner.prepend(box);
+  }
+  box.className = 'visible';
+  box.textContent = '⚠ ' + msg;
+}
+
+function showForcedDraw(msg) {
+  let box = document.getElementById('forced-draw-box');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'forced-draw-box';
+    actionInner.prepend(box);
+  }
+  box.className = 'visible';
+  box.textContent = '↩ ' + msg;
+  setTimeout(() => { box.className = ''; }, 5000);
+}
+
+function cardButtonHTML(card, forced) {
+  const info = CARD_INFO[card.value] || { name: card.name, color: '#999', desc: '' };
+  const cls  = forced ? 'card-btn forced' : 'card-btn';
+  return `
+    <button class="${cls}" data-value="${card.value}" style="border-color:${forced ? '#f9a825' : ''}">
+      <div class="card-value" style="color:${info.color}">${card.value}</div>
+      <div class="card-info">
+        <div class="card-name">${info.name}</div>
+        <div class="card-desc">${info.desc}</div>
+      </div>
+    </button>`;
+}
+
+function renderAction() {
+  actionInner.innerHTML = '';
+
+  // Preserve error/forced-draw boxes across re-renders
+  const errBox = document.getElementById('error-box');
+  const fdBox  = document.getElementById('forced-draw-box');
+
+  switch (phase) {
+
+    case 'lobby':
+    case 'gameOver': {
+      const msg = document.createElement('p');
+      msg.id = 'waiting-msg';
+      msg.textContent = phase === 'gameOver' ? 'Round over. Start a new game!' : 'Start a new game to play.';
+      actionInner.appendChild(msg);
+      break;
+    }
+
+    case 'waiting': {
+      const msg = document.createElement('p');
+      msg.id = 'waiting-msg';
+      msg.textContent = 'Waiting for other players…';
+      actionInner.appendChild(msg);
+      break;
+    }
+
+    case 'choosingCard': {
+      if (countessForced) {
+        const note = document.createElement('div');
+        note.className = 'action-section';
+        note.innerHTML = '<h3>Must play</h3><p style="font-size:0.82rem;color:#f9a825;margin-bottom:8px">You hold Countess with King or Prince — you must discard the Countess.</p>';
+        const forced = (cardOne.value === 7) ? cardOne : cardTwo;
+        note.innerHTML += cardButtonHTML(forced, true);
+        actionInner.appendChild(note);
+
+        // Auto-select Countess and proceed
+        pendingCardValue = 7;
+        const cardNeeds = needsTarget(7);
+        if (!cardNeeds) {
+          phase = 'choosingCard'; // will auto-submit below
+          submitMove();
+        } else {
+          phase = 'choosingTarget';
+          renderAction();
+        }
+      } else {
+        const sec = document.createElement('div');
+        sec.className = 'action-section';
+        sec.innerHTML = '<h3>Choose a card to play</h3>';
+        sec.innerHTML += cardButtonHTML(cardOne, false);
+        sec.innerHTML += cardButtonHTML(cardTwo, false);
+        actionInner.appendChild(sec);
+
+        actionInner.querySelectorAll('.card-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            pendingCardValue = parseInt(btn.dataset.value);
+            if (needsTarget(pendingCardValue)) {
+              phase = 'choosingTarget';
+            } else {
+              phase = 'choosingGuess'; // only Guard, but guard needs target first
+              // guard is handled in choosingTarget → choosingGuess flow
+              // For no-target cards: submit directly
+              submitMove();
+              return;
+            }
+            renderAction();
+          });
+        });
+      }
+      break;
+    }
+
+    case 'choosingTarget': {
+      const sec = document.createElement('div');
+      sec.className = 'action-section';
+      const info = CARD_INFO[pendingCardValue] || {};
+      sec.innerHTML = `<h3>Playing: ${info.name || pendingCardValue}</h3><p style="font-size:0.82rem;color:#999;margin-bottom:8px">${info.desc || ''}</p><h3>Choose a target</h3>`;
+
+      const canSelf = pendingCardValue === 5; // Prince can target self
+      const targets = activePlayers.filter(p => canSelf ? true : p.id !== selfId);
+
+      targets.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'target-btn' + (p.protected ? ' protected-target' : '');
+        btn.textContent = p.name + (p.id === selfId ? ' (you)' : '') + (p.protected ? ' 🛡' : '');
+        btn.addEventListener('click', () => {
+          pendingTarget = p.id;
+          if (pendingCardValue === 1) {
+            phase = 'choosingGuess';
+          } else {
+            submitMove();
+            return;
+          }
+          renderAction();
+        });
+        sec.appendChild(btn);
+      });
+
+      actionInner.appendChild(sec);
+      break;
+    }
+
+    case 'choosingGuess': {
+      const sec = document.createElement('div');
+      sec.className = 'action-section';
+      sec.innerHTML = '<h3>Guard — guess the card</h3><p style="font-size:0.82rem;color:#999;margin-bottom:8px">You cannot guess Guard (1).</p>';
+      [2,3,4,5,6,7,8].forEach(v => {
+        const btn = document.createElement('button');
+        btn.className = 'guess-btn';
+        const ci = CARD_INFO[v];
+        btn.textContent = v + ' — ' + (ci ? ci.name : '?');
+        btn.addEventListener('click', () => {
+          pendingGuess = v;
+          submitMove();
+        });
+        sec.appendChild(btn);
+      });
+      actionInner.appendChild(sec);
+      break;
+    }
+  }
+
+  // Re-inject persistent boxes at the top
+  if (errBox && errBox.className === 'visible') actionInner.prepend(errBox);
+  if (fdBox  && fdBox.className  === 'visible') actionInner.prepend(fdBox);
+}
+
+// Cards that require choosing a target (1=Guard, 2=Priest, 3=Baron, 5=Prince, 6=King)
+function needsTarget(v) {
+  return [1, 2, 3, 5, 6].includes(v);
+}
+
+function submitMove() {
+  phase = 'waiting';
+  send({
+    type:      'move',
+    cardValue: pendingCardValue,
+    target:    pendingTarget  ?? -1,
+    guess:     pendingGuess   ?? 0
+  });
+  pendingCardValue = pendingTarget = pendingGuess = null;
+  renderAction();
+}
+
+// ── Button ─────────────────────────────────────────────────────────────────
+btnNewGame.addEventListener('click', () => {
+  btnNewGame.disabled = true;
+  logEl.innerHTML = '';
+  playersEl.innerHTML = '';
+  allPlayers = [];
+  phase = 'waiting';
+  renderAction();
+  send({ type: 'createGame' });
+});
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+connect();
+renderAction();
+</script>
 </body>
 </html>

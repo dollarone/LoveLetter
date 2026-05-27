@@ -14,16 +14,13 @@ export class SimpleAIPlayer extends Player {
         this.override = false;
         this.targetPlayerIndex = -1;
     }
-    itsYourTurn() {
-        //console.log("It's your turn");
+    async itsYourTurn(): Promise<boolean> {
         this.drawCard();
-        //console.log("You drew a card");
         let code: number = this.game.playCard(this);
         while (code != ReturnCodes.SUCCESS) {
             this.override = true;
             code = this.game.playCard(this);
         }
-        //console.log("You played a card");
         return true;
     }
 

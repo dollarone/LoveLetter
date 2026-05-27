@@ -1,62 +1,101 @@
- 
-import WebSocket from 'ws';
-import { Game } from './game'; // Assuming you have a Game class in game.ts
+import WebSocket, { WebSocketServer } from 'ws';
+import { Game } from './game';
 import { SimpleAIPlayer } from './simpleAIplayer';
+import { WebSocketPlayer, ClientMove } from './webSocketPlayer';
 
-const wss = new WebSocket.Server({ port: 8080 });
+const PORT = 8080;
+const wss = new WebSocketServer({ port: PORT });
 
-let clients = [];
+console.log(`Love Letter server listening on ws://localhost:${PORT}`);
+
+function stripAnsi(s: string): string {
+    return s.replace(/\x1b\[[0-9;]*m/g, '');
+}
 
 wss.on('connection', (ws: WebSocket) => {
-  console.log('New client connected');
-  clients.push(ws);
-  console.log("Added client: " + ws.toString());
-  console.log("Clients: " + clients.concat());
-  console.log("Total clients: " + clients.length);   
+    console.log('Client connected');
 
-  ws.on('message', (message: string) => {
-    console.log(`Received message: ${message}`);
-    //wss.clients.forEach((client) => {
-    //  client.send(`Server received your message: ${message}`);
-    //});
-    ws.send(`Server received your message: ${message}`);
-    const event = JSON.parse(message);
-    if (event.type === 'createGame') {
-      console.log('createGame received');
-      ws.send('createGame');
-    } else if (event.type === 'startGame') {
-      console.log('startGame received');
-      ws.send('startGame');
-    } else if (event.type === 'playCardOne') {
-      console.log('playCardOne received');
-      ws.send('playCardOne');
-    } else if (event.type === 'playCardTwo') {
-      console.log('playCardTwo received');
-      ws.send('playCardTwo');
-    } else if (event.type === 'drawCard') {
-      console.log('drawCard received');
-      ws.send('drawCard');
+    let wsPlayer: WebSocketPlayer | null = null;
+    let gameRunning = false;
+
+    function send(msg: object) {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(msg));
+        }
     }
-  });
 
-  ws.on('close', () => {
-    console.log('Client disconnected');
-      
-    const index = clients.indexOf(ws, 0);
-    if (index > -1) {
-      clients.splice(index, 1);
+    async function startGame() {
+        if (gameRunning) return;
+        gameRunning = true;
+
+        const game = new Game(4, (msg: string) => {
+            console.log(msg);
+            send({ type: 'log', message: stripAnsi(msg) });
+        });
+
+        wsPlayer = new WebSocketPlayer(game, 0, 'You', ws);
+        const bob     = new SimpleAIPlayer(game, 1, 'Bob');
+        const malice  = new SimpleAIPlayer(game, 2, 'Malice');
+        const angreta = new SimpleAIPlayer(game, 3, 'Angreta');
+
+        game.addPlayer(wsPlayer);
+        game.addPlayer(bob);
+        game.addPlayer(malice);
+        game.addPlayer(angreta);
+
+        game.setOnAction(() => {
+            send({
+                type: 'stateUpdate',
+                players: game.getAllPlayers(),
+                deckSize: game.getDeckSize()
+            });
+        });
+
+        send({
+            type: 'gameStarted',
+            selfId: 0,
+            players: ['You', 'Bob', 'Malice', 'Angreta']
+        });
+
+        try {
+            await game.start();
+        } catch (err) {
+            console.error('Game error:', err);
+        }
+
+        wsPlayer = null;
+        gameRunning = false;
+        send({ type: 'gameOver' });
     }
-    console.log("Removed client: " + ws.toString());
-    console.log("Clients: " + clients.concat());
-    console.log("Total clients: " + clients.length);   
-  });
-  
 
-  function startNewGame() {
-    console.log('Starting new game...');
-    // Logic to start a new game
-    let game = new Game();
-    game.addPlayer(new SimpleAIPlayer(game, 0));
-    game.start();
-  }
+    ws.on('message', (data: Buffer) => {
+        let msg: any;
+        try {
+            msg = JSON.parse(data.toString());
+        } catch {
+            console.warn('Received non-JSON message');
+            return;
+        }
+
+        if (msg.type === 'createGame') {
+            startGame();
+        } else if (msg.type === 'move' && wsPlayer) {
+            const move: ClientMove = {
+                cardValue: msg.cardValue,
+                target:    msg.target   ?? -1,
+                guess:     msg.guess    ?? 0
+            };
+            wsPlayer.receiveMove(move);
+        }
+    });
+
+    ws.on('close', () => {
+        console.log('Client disconnected');
+        wsPlayer = null;
+        gameRunning = false;
+    });
+
+    ws.on('error', (err) => {
+        console.error('WebSocket error:', err.message);
+    });
 });

@@ -15,7 +15,7 @@ export class HumanCLIPlayer extends Player {
         return true;
     }
 
-    itsYourTurn() {
+    async itsYourTurn(): Promise<boolean> {
         this.drawCard();
         let code: number = this.game.playCard(this);
         while (code !== ReturnCodes.SUCCESS) {

@@ -2,9 +2,11 @@
   "name": "love-letter-cs",
   "version": "1.0.0",
   "dependencies": {
-    "readline-sync": "^1.4.10"
+    "readline-sync": "^1.4.10",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@types/readline-sync": "^1.4.8"
+    "@types/readline-sync": "^1.4.8",
+    "@types/ws": "^8.5.14"
   }
 }
