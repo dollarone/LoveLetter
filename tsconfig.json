@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+      "target": "ES5",
+      "module": "CommonJS",
+      "esModuleInterop": true,
+      "sourceMap": true
+    },
+    "include": ["*.ts", "*.tsx"],
+  }
