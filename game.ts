@@ -39,6 +39,34 @@ export class Game {
         if (this.onTurnStartCallback) this.onTurnStartCallback(playerId);
     }
 
+    private onPriestRevealCallback: ((targetId: number, card: { name: string, value: number }) => void) | null = null;
+
+    setOnPriestReveal(fn: (targetId: number, card: { name: string, value: number }) => void): void {
+        this.onPriestRevealCallback = fn;
+    }
+
+    private onShowdownCallback: ((reveals: Array<{ playerId: number, card: { name: string, value: number } }>) => void) | null = null;
+
+    setOnShowdown(fn: (reveals: Array<{ playerId: number, card: { name: string, value: number } }>) => void): void {
+        this.onShowdownCallback = fn;
+    }
+
+    private onBaronRevealCallback: ((attackerId: number, attackerCard: { name: string, value: number }, targetId: number, targetCard: { name: string, value: number }) => void) | null = null;
+
+    setOnBaronReveal(fn: (attackerId: number, attackerCard: { name: string, value: number }, targetId: number, targetCard: { name: string, value: number }) => void): void {
+        this.onBaronRevealCallback = fn;
+    }
+
+    private onAIPlanningCallback: ((playerId: number, cardValue: number, targetId: number, guess: number) => void) | null = null;
+
+    setOnAIPlanning(fn: (playerId: number, cardValue: number, targetId: number, guess: number) => void): void {
+        this.onAIPlanningCallback = fn;
+    }
+
+    notifyAIPlanning(playerId: number, cardValue: number, targetId: number, guess: number = 0): void {
+        if (this.onAIPlanningCallback) this.onAIPlanningCallback(playerId, cardValue, targetId, guess);
+    }
+
     addPlayer(player: Player) {
         this.players.push(player);
     }
@@ -184,6 +212,12 @@ export class Game {
                 }
                 if (player.isHuman()) {
                     this.log(this.players[event.target].playerName + " holds: " + this.players[event.target].cardOne.getCardName());
+                    if (this.onPriestRevealCallback) {
+                        this.onPriestRevealCallback(event.target, {
+                            name: this.players[event.target].cardOne.getCardName(),
+                            value: this.players[event.target].cardOne.getCardValue()
+                        });
+                    }
                 }
                 break;
             }
@@ -191,6 +225,16 @@ export class Game {
                 if (this.players[event.target].protectedForOneRound) {
                     this.log(this.players[event.target].playerName + " is protected!");
                     return ReturnCodes.TARGET_PROTECTED;
+                }
+                if (player.isHuman() || this.players[event.target].isHuman()) {
+                    if (this.onBaronRevealCallback) {
+                        this.onBaronRevealCallback(
+                            player.playerId,
+                            { name: player.cardOne.getCardName(), value: player.cardOne.getCardValue() },
+                            event.target,
+                            { name: this.players[event.target].cardOne.getCardName(), value: this.players[event.target].cardOne.getCardValue() }
+                        );
+                    }
                 }
                 if (player.isHuman()) {
                     this.log("You hold " + this.players[player.playerId].cardOne.getCardName() +
@@ -273,7 +317,14 @@ export class Game {
     }
 
     drawLeftover(_player: Player): Card {
-        return this.leftoverCard;
+        const card = this.leftoverCard!;
+        this.leftoverCard = null;
+        return card;
+    }
+
+    getLeftoverCard(): { name: string, value: number } | null {
+        if (!this.leftoverCard) return null;
+        return { name: this.leftoverCard.getCardName(), value: this.leftoverCard.getCardValue() };
     }
 
     getDeckSize(): number {
@@ -281,13 +332,19 @@ export class Game {
     }
 
     getAllPlayers(): Array<{ id: number, name: string, eliminated: boolean, protected: boolean, discards: Array<{ name: string, value: number }> }> {
-        return this.players.map(p => ({
-            id: p.playerId,
-            name: p.playerName,
-            eliminated: p.outOfThisRound,
-            protected: p.protectedForOneRound,
-            discards: p.discards.map(d => ({ name: d.getCardName(), value: d.getCardValue() }))
-        }));
+        return this.players.map(p => {
+            const discards = p.discards.map(d => ({ name: d.getCardName(), value: d.getCardValue() }));
+            if (p.outOfThisRound && p.cardOne) {
+                discards.push({ name: p.cardOne.getCardName(), value: p.cardOne.getCardValue() });
+            }
+            return {
+                id: p.playerId,
+                name: p.playerName,
+                eliminated: p.outOfThisRound,
+                protected: p.protectedForOneRound,
+                discards
+            };
+        });
     }
 
     getActivePlayers(): Array<{ id: number, name: string, protected: boolean, discards: Array<{ name: string, value: number }> }> {
@@ -306,6 +363,14 @@ export class Game {
         this.log("=== Showdown ===");
         let winner = this.players[0];
         let winnerCard = new Card(0, "none", "none");
+
+        const reveals: Array<{ playerId: number, card: { name: string, value: number } }> = [];
+        for (let i = 0; i < this.playerCount; i++) {
+            if (!this.players[i].outOfThisRound) {
+                reveals.push({ playerId: i, card: { name: this.players[i].cardOne.getCardName(), value: this.players[i].cardOne.getCardValue() } });
+            }
+        }
+        if (this.onShowdownCallback) this.onShowdownCallback(reveals);
 
         for (let i = 0; i < this.playerCount; i++) {
             if (!this.players[i].outOfThisRound) {

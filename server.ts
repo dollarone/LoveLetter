@@ -82,10 +82,15 @@ wss.on('connection', (ws: WebSocket) => {
         game.addPlayer(angreta);
 
         game.setOnAction(() => {
+            const yourCard = wsPlayer && wsPlayer.cardOne
+                ? { name: wsPlayer.cardOne.getCardName(), value: wsPlayer.cardOne.getCardValue() }
+                : null;
             send({
                 type: 'stateUpdate',
                 players: game.getAllPlayers(),
-                deckSize: game.getDeckSize()
+                deckSize: game.getDeckSize(),
+                leftoverCard: game.getLeftoverCard(),
+                yourCard
             });
         });
 
@@ -93,10 +98,27 @@ wss.on('connection', (ws: WebSocket) => {
             send({ type: 'turnStart', playerId });
         });
 
+        game.setOnAIPlanning((playerId: number, cardValue: number, targetId: number, guess: number) => {
+            send({ type: 'aiPlaying', playerId, cardValue, targetId, guess });
+        });
+
+        game.setOnPriestReveal((targetId: number, card: { name: string, value: number }) => {
+            send({ type: 'priestReveal', targetId, card });
+        });
+
+        game.setOnBaronReveal((attackerId: number, attackerCard: { name: string, value: number }, targetId: number, targetCard: { name: string, value: number }) => {
+            send({ type: 'baronReveal', attackerId, attackerCard, targetId, targetCard });
+        });
+
+        game.setOnShowdown((reveals: Array<{ playerId: number, card: { name: string, value: number } }>) => {
+            send({ type: 'showdown', reveals });
+        });
+
         send({
             type: 'gameStarted',
             selfId: 0,
-            players: ['You', 'Bob', 'Malice', 'Angreta']
+            players: ['You', 'Bob', 'Malice', 'Angreta'],
+            leftoverCard: game.getLeftoverCard()
         });
 
         try {

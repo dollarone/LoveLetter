@@ -115,19 +115,37 @@ wss.on('connection', function (ws) {
                         game.addPlayer(malice);
                         game.addPlayer(angreta);
                         game.setOnAction(function () {
+                            var yourCard = wsPlayer && wsPlayer.cardOne
+                                ? { name: wsPlayer.cardOne.getCardName(), value: wsPlayer.cardOne.getCardValue() }
+                                : null;
                             send({
                                 type: 'stateUpdate',
                                 players: game.getAllPlayers(),
-                                deckSize: game.getDeckSize()
+                                deckSize: game.getDeckSize(),
+                                leftoverCard: game.getLeftoverCard(),
+                                yourCard: yourCard
                             });
                         });
                         game.setOnTurnStart(function (playerId) {
                             send({ type: 'turnStart', playerId: playerId });
                         });
+                        game.setOnAIPlanning(function (playerId, cardValue, targetId, guess) {
+                            send({ type: 'aiPlaying', playerId: playerId, cardValue: cardValue, targetId: targetId, guess: guess });
+                        });
+                        game.setOnPriestReveal(function (targetId, card) {
+                            send({ type: 'priestReveal', targetId: targetId, card: card });
+                        });
+                        game.setOnBaronReveal(function (attackerId, attackerCard, targetId, targetCard) {
+                            send({ type: 'baronReveal', attackerId: attackerId, attackerCard: attackerCard, targetId: targetId, targetCard: targetCard });
+                        });
+                        game.setOnShowdown(function (reveals) {
+                            send({ type: 'showdown', reveals: reveals });
+                        });
                         send({
                             type: 'gameStarted',
                             selfId: 0,
-                            players: ['You', 'Bob', 'Malice', 'Angreta']
+                            players: ['You', 'Bob', 'Malice', 'Angreta'],
+                            leftoverCard: game.getLeftoverCard()
                         });
                         _a.label = 1;
                     case 1:

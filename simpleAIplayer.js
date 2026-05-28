@@ -54,6 +54,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SimpleAIPlayer = void 0;
 var player_1 = require("./player");
 var returncodes_1 = require("./returncodes");
+var NO_TARGET_CARDS = [4, 7, 8]; // Handmaid, Countess, Princess — target irrelevant
 var SimpleAIPlayer = /** @class */ (function (_super) {
     __extends(SimpleAIPlayer, _super);
     function SimpleAIPlayer(game, id, name) {
@@ -61,126 +62,86 @@ var SimpleAIPlayer = /** @class */ (function (_super) {
         var _this = _super.call(this, game, name) || this;
         _this.override = false;
         _this.targetPlayerIndex = -1;
+        _this._computedPlay = null;
         _this.playerId = id;
-        _this.override = false;
-        _this.targetPlayerIndex = -1;
         return _this;
     }
     SimpleAIPlayer.prototype.itsYourTurn = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var code;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        this.game.notifyTurnStart(this.playerId);
-                        return [4 /*yield*/, new Promise(function (r) { return setTimeout(r, 700); })];
-                    case 1:
-                        _a.sent();
-                        this.drawCard();
-                        code = this.game.playCard(this);
-                        while (code != returncodes_1.ReturnCodes.SUCCESS) {
-                            this.override = true;
-                            code = this.game.playCard(this);
-                        }
-                        return [4 /*yield*/, new Promise(function (r) { return setTimeout(r, 900); })];
-                    case 2:
-                        _a.sent();
-                        return [2 /*return*/, true];
+            var _a, cardValue, targetId, guess, code;
+            return __generator(this, function (_b) {
+                this.game.notifyTurnStart(this.playerId);
+                this.drawCard();
+                _a = this.precomputePlay(), cardValue = _a.cardValue, targetId = _a.targetId, guess = _a.guess;
+                this.game.notifyAIPlanning(this.playerId, cardValue, targetId, guess);
+                code = this.game.playCard(this);
+                while (code !== returncodes_1.ReturnCodes.SUCCESS) {
+                    this.override = true;
+                    this._computedPlay = null;
+                    code = this.game.playCard(this);
                 }
+                return [2 /*return*/, true];
             });
         });
     };
+    /** Pre-compute and cache the move so playCard() can reuse it without re-running logic. */
+    SimpleAIPlayer.prototype.precomputePlay = function () {
+        this._computedPlay = this._computePlayInternal();
+        var parsed = JSON.parse(this._computedPlay);
+        var cardValue = this.cardTwo.getCardValue();
+        var targetId = NO_TARGET_CARDS.includes(cardValue) ? -1 : parsed.target;
+        var guess = parsed.guess || 0;
+        return { cardValue: cardValue, targetId: targetId, guess: guess };
+    };
     SimpleAIPlayer.prototype.playCard = function () {
+        if (this._computedPlay) {
+            var result = this._computedPlay;
+            this._computedPlay = null;
+            return result;
+        }
+        return this._computePlayInternal();
+    };
+    SimpleAIPlayer.prototype._computePlayInternal = function () {
         if (this.override) {
             this.override = false;
             console.log("    Override - ensuring valid card play ");
             if (!this.game.areThereAnyValidTargets(this) && this.cardTwo.getCardValue() === 5) {
                 console.log("    No valid targets - targetting self with Prince");
-                var guess_1 = Math.floor(Math.random() * 7) + 2;
-                var event_1 = {
-                    type: "playCard",
-                    target: this.playerId,
-                    guess: guess_1
-                };
-                return JSON.stringify(event_1);
+                return JSON.stringify({ type: "playCard", target: this.playerId, guess: Math.floor(Math.random() * 7) + 2 });
             }
             if (!this.game.areThereAnyValidTargets(this)) {
                 console.log("    No valid targets - targetting noone");
-                var guess_2 = Math.floor(Math.random() * 7) + 2;
-                var event_2 = {
-                    type: "playCard",
-                    target: -1,
-                    guess: guess_2
-                };
-                return JSON.stringify(event_2);
+                return JSON.stringify({ type: "playCard", target: -1, guess: Math.floor(Math.random() * 7) + 2 });
             }
-            // new random target:
             var newTargetPlayerIndex = Math.floor(Math.random() * this.activePlayerIds.length);
-            while (this.activePlayerIds[newTargetPlayerIndex] == this.playerId || newTargetPlayerIndex == this.targetPlayerIndex) {
+            while (this.activePlayerIds[newTargetPlayerIndex] === this.playerId || newTargetPlayerIndex === this.targetPlayerIndex) {
                 newTargetPlayerIndex = (newTargetPlayerIndex + 1) % this.activePlayerIds.length;
             }
             this.targetPlayerIndex = newTargetPlayerIndex;
             console.log("    Target player index: " + this.activePlayerIds[this.targetPlayerIndex]);
-            switch (this.cardTwo.getCardValue()) {
-                case 1:
-                    break;
-                case 2:
-                    break;
-                case 3:
-                    break;
-                case 5:
-                    break;
-                case 6:
-                    break;
-            }
-            var guess = Math.floor(Math.random() * 7) + 2;
-            var event_3 = {
-                type: "playCard",
-                target: this.activePlayerIds[this.targetPlayerIndex],
-                guess: guess
-            };
-            return JSON.stringify(event_3);
+            return JSON.stringify({ type: "playCard", target: this.activePlayerIds[this.targetPlayerIndex], guess: Math.floor(Math.random() * 7) + 2 });
         }
         this.targetPlayerIndex = Math.floor(Math.random() * this.activePlayerIds.length);
         if (this.activePlayerIds[this.targetPlayerIndex] === this.playerId) {
             this.targetPlayerIndex = (this.targetPlayerIndex + 1) % this.activePlayerIds.length;
         }
-        while ((this.game.isPlayerStillInRound(this.activePlayerIds[this.targetPlayerIndex]) == false) || this.activePlayerIds[this.targetPlayerIndex] == this.playerId) {
+        while (!this.game.isPlayerStillInRound(this.activePlayerIds[this.targetPlayerIndex]) || this.activePlayerIds[this.targetPlayerIndex] === this.playerId) {
             this.targetPlayerIndex = (this.targetPlayerIndex + 1) % this.activePlayerIds.length;
         }
-        //targetPlayerIndex = (targetPlayerIndex + 1) % this.activePlayerIds.length;
         console.log("    Target player index: " + this.activePlayerIds[this.targetPlayerIndex]);
         console.log(this.playerName + " is choosing between: " + this.cardOne.getCardName() + " and " + this.cardTwo.getCardName());
-        if (this.cardTwo.getCardValue() == 7 && (this.cardOne.getCardValue() == 6 || this.cardOne.getCardValue() == 5)) {
-            var event_4 = {
-                type: "playCard",
-                target: this.activePlayerIds[this.targetPlayerIndex],
-                guess: 0
-            };
-            return JSON.stringify(event_4);
+        // Countess forced: keep Countess in cardTwo
+        if (this.cardTwo.getCardValue() === 7 && (this.cardOne.getCardValue() === 6 || this.cardOne.getCardValue() === 5)) {
+            return JSON.stringify({ type: "playCard", target: this.activePlayerIds[this.targetPlayerIndex], guess: 0 });
         }
-        if (this.cardOne.getCardValue() == 7 && (this.cardTwo.getCardValue() == 6 || this.cardTwo.getCardValue() == 5) ||
+        // Swap so the higher-value card (or Countess-forced) ends up in cardTwo (played)
+        if ((this.cardOne.getCardValue() === 7 && (this.cardTwo.getCardValue() === 6 || this.cardTwo.getCardValue() === 5)) ||
             (this.cardOne.getCardValue() <= this.cardTwo.getCardValue())) {
-            var card = this.cardOne;
+            var tmp = this.cardOne;
             this.cardOne = this.cardTwo;
-            this.cardTwo = card;
-            var guess = Math.floor(Math.random() * 7) + 2;
-            var event_5 = {
-                type: "playCard",
-                target: this.activePlayerIds[this.targetPlayerIndex],
-                guess: guess
-            };
-            return JSON.stringify(event_5);
+            this.cardTwo = tmp;
         }
-        else {
-            var guess = Math.floor(Math.random() * 7) + 2;
-            var event_6 = {
-                type: "playCard",
-                target: this.activePlayerIds[this.targetPlayerIndex],
-                guess: guess
-            };
-            return JSON.stringify(event_6);
-        }
+        return JSON.stringify({ type: "playCard", target: this.activePlayerIds[this.targetPlayerIndex], guess: Math.floor(Math.random() * 7) + 2 });
     };
     return SimpleAIPlayer;
 }(player_1.Player));
