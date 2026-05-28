@@ -4,597 +4,912 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Love Letter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ─── Reset & base ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --card-w: 150px;
+  --card-h: 211px;
+  --font: 'Quicksand', sans-serif;
+  --bg: #f5f0e8;
+  --felt: #2d5a27;
+  --felt-dark: #1e3d1a;
+  --ink: #1a1a1a;
+  --red: #c0392b;
+  --gold: #c9a84c;
+  --blue: #1565c0;
+  --badge-bg: #333;
+}
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-  body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #1a1a2e;
-    color: #e0e0e0;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+/* ─── Header ────────────────────────────────────────────────────── */
+header {
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+header h1 { font-size: 1.4rem; letter-spacing: 3px; color: var(--gold); flex: 1; }
+.badge {
+  background: var(--badge-bg);
+  color: #fff;
+  padding: 2px 10px 3px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+#round-badge, #deck-badge { display: none; }
+#status-msg {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 1rem;
+  color: #ddd;
+  min-height: 1.4em;
+}
+#btn-new-game {
+  appearance: none;
+  border: 2px solid var(--gold);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--gold);
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+#btn-new-game:hover { background: var(--gold); color: var(--ink); }
+#btn-new-game:disabled { opacity: 0.4; cursor: default; }
 
-  /* ── Header ── */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-    background: #16213e;
-    border-bottom: 1px solid #0f3460;
-    flex-shrink: 0;
-  }
-  header h1 { font-size: 1.3rem; color: #e94560; letter-spacing: 2px; }
-  #status-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: #666; display: inline-block; margin-right: 8px;
-  }
-  #status-dot.connected { background: #4caf50; }
-  #status-text { font-size: 0.85rem; color: #999; }
-  #btn-new-game {
-    padding: 8px 18px; border: none; border-radius: 6px;
-    background: #e94560; color: #fff; font-size: 0.9rem;
-    cursor: pointer; transition: background 0.2s;
-  }
-  #btn-new-game:hover { background: #c73652; }
-  #btn-new-game:disabled { background: #555; cursor: default; }
+/* ─── Main layout ───────────────────────────────────────────────── */
+main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
 
-  /* ── Main area ── */
-  main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    gap: 0;
-  }
+/* ─── Table (left side) ─────────────────────────────────────────── */
+#table-area {
+  flex: 1;
+  background: var(--felt);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  min-height: 0;
+}
 
-  /* ── Game log ── */
-  #log-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid #0f3460;
-    overflow: hidden;
-  }
-  #log-panel h2 { padding: 8px 14px; font-size: 0.8rem; text-transform: uppercase; color: #888; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
-  #log {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px 14px;
-    font-size: 0.85rem;
-    line-height: 1.6;
-  }
-  #log .entry { padding: 2px 0; border-bottom: 1px solid #1e2a45; }
-  #log .entry:last-child { border-bottom: none; }
-  #log .sep { color: #444; }
-  #log .highlight { color: #e94560; }
+.table-grid {
+  display: grid;
+  grid-template-columns: 1fr calc(var(--card-w) * 2 + 30px) 1fr;
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    ". top ."
+    "left mid right"
+    ". you .";
+  gap: 16px;
+  align-items: center;
+  justify-items: center;
+}
 
-  /* ── Players panel ── */
-  #players-panel {
-    width: 220px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid #0f3460;
-    overflow: hidden;
-  }
-  #players-panel h2 { padding: 8px 14px; font-size: 0.8rem; text-transform: uppercase; color: #888; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
-  #players-list { flex: 1; overflow-y: auto; padding: 8px; }
-  .player-card {
-    background: #16213e;
-    border: 1px solid #0f3460;
-    border-radius: 6px;
-    padding: 8px 10px;
-    margin-bottom: 6px;
-    font-size: 0.82rem;
-    transition: opacity 0.3s;
-  }
-  .player-card.self { border-color: #e94560; }
-  .player-card.eliminated { opacity: 0.35; }
-  .player-card .p-name { font-weight: bold; margin-bottom: 3px; }
-  .player-card .p-name .badge {
-    display: inline-block; font-size: 0.7rem; padding: 1px 5px;
-    border-radius: 3px; margin-left: 4px; vertical-align: middle;
-  }
-  .badge.protected { background: #1565c0; color: #fff; }
-  .badge.eliminated { background: #555; color: #ccc; }
-  .badge.self-badge { background: #e94560; color: #fff; }
-  .badge.turn { background: #388e3c; color: #fff; }
-  .p-discards { color: #888; font-size: 0.75rem; margin-top: 3px; }
+/* ─── Player slots ──────────────────────────────────────────────── */
+.player-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.player-slot.top    { grid-area: top; }
+.player-slot.left   { grid-area: left; }
+.player-slot.right  { grid-area: right; }
+.player-slot.you    { grid-area: you; flex-direction: row; gap: 16px; align-items: flex-start; }
 
-  /* ── Action panel ── */
-  #action-panel {
-    width: 340px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  #action-panel h2 { padding: 8px 14px; font-size: 0.8rem; text-transform: uppercase; color: #888; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
-  #action-inner {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
+.player-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.player-name .shield { font-size: 0.75rem; color: #64b5f6; }
+.player-name .out    { font-size: 0.75rem; color: #ef5350; }
 
-  .action-section h3 { font-size: 0.8rem; text-transform: uppercase; color: #888; margin-bottom: 8px; }
+.discards-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 200px;
+}
+.discard-chip {
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
 
-  .card-btn {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    width: 100%;
-    background: #16213e;
-    border: 2px solid #0f3460;
-    border-radius: 8px;
-    padding: 10px;
-    cursor: pointer;
-    text-align: left;
-    color: #e0e0e0;
-    transition: border-color 0.2s, background 0.2s;
-    margin-bottom: 6px;
-  }
-  .card-btn:hover { border-color: #e94560; background: #1e2a45; }
-  .card-btn.selected { border-color: #e94560; background: #1e2a45; }
-  .card-btn.forced { border-color: #f9a825; background: #1e2a45; cursor: default; }
-  .card-btn .card-value {
-    font-size: 1.4rem;
-    font-weight: bold;
-    width: 32px;
-    text-align: center;
-    flex-shrink: 0;
-    color: #e94560;
-  }
-  .card-btn .card-info .card-name { font-weight: bold; font-size: 0.95rem; }
-  .card-btn .card-info .card-desc { font-size: 0.75rem; color: #999; margin-top: 2px; }
+/* ─── Card elements ─────────────────────────────────────────────── */
+.card-wrap {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  perspective: 1000px;
+  cursor: default;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+.card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s;
+}
+.card-inner.flipped { transform: rotateY(180deg); }
+.card-face, .card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.card-back { transform: rotateY(180deg); }
+.card-face img, .card-back img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
-  .target-btn, .guess-btn {
-    padding: 8px 14px;
-    border: 1px solid #0f3460;
-    border-radius: 6px;
-    background: #16213e;
-    color: #e0e0e0;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: background 0.2s, border-color 0.2s;
-    margin: 3px;
-  }
-  .target-btn:hover, .guess-btn:hover { background: #1e2a45; border-color: #e94560; }
-  .target-btn.protected-target { border-color: #1565c0; color: #90caf9; }
+/* ─── Selection & interaction ───────────────────────────────────── */
+.card-wrap.selectable {
+  cursor: pointer;
+}
+.card-wrap.selectable:hover {
+  transform: translateY(-8px);
+}
+.card-wrap.selectable .card-inner {
+  box-shadow: 0 0 0 3px var(--gold), 0 8px 20px rgba(0,0,0,0.6);
+  border-radius: 10px;
+}
+.card-wrap.selected .card-inner {
+  box-shadow: 0 0 0 4px #fff, 0 0 0 7px var(--gold);
+  border-radius: 10px;
+}
+.card-wrap.target-eligible {
+  cursor: pointer;
+  animation: pulse-border 1.2s infinite;
+}
+.card-wrap.target-eligible:hover {
+  transform: translateY(-8px);
+}
+@keyframes pulse-border {
+  0%, 100% { filter: drop-shadow(0 0 6px var(--gold)); }
+  50%       { filter: drop-shadow(0 0 14px var(--gold)); }
+}
+.card-wrap.eliminated .card-inner { opacity: 0.4; }
+.card-wrap.forced .card-inner {
+  box-shadow: 0 0 0 4px #f9a825;
+  border-radius: 10px;
+}
 
-  #waiting-msg {
-    color: #888;
-    font-style: italic;
-    font-size: 0.9rem;
-    padding: 20px 0;
-    text-align: center;
-  }
+/* fly-in on page load */
+.card-wrap.fly-in {
+  transform: translateY(-800px) translateX(-400px) rotate(40deg);
+}
 
-  #error-box {
-    background: #4a1010;
-    border: 1px solid #e94560;
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 0.85rem;
-    color: #ff8a80;
-    display: none;
-  }
-  #error-box.visible { display: block; }
+/* ─── Deck pile ─────────────────────────────────────────────────── */
+#deck-area {
+  grid-area: mid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  align-self: center;
+}
+#deck-pile-card {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: 10px;
+  position: relative;
+  transition: opacity 0.4s;
+}
+#deck-pile-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+  box-shadow: -4px -4px 0 rgba(0,0,0,0.3), -8px -8px 0 rgba(0,0,0,0.2), 0 6px 16px rgba(0,0,0,0.6);
+}
+.deck-label {
+  color: rgba(255,255,255,0.6);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
 
-  #forced-draw-box {
-    background: #1a3a1a;
-    border: 1px solid #4caf50;
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 0.85rem;
-    color: #a5d6a7;
-    display: none;
-  }
-  #forced-draw-box.visible { display: block; }
+/* ─── Flying card animation ─────────────────────────────────────── */
+.fly-card {
+  position: fixed;
+  width: var(--card-w);
+  height: var(--card-h);
+  z-index: 1000;
+  pointer-events: none;
+  transition: left 0.45s cubic-bezier(0.25,0.46,0.45,0.94),
+              top  0.45s cubic-bezier(0.25,0.46,0.45,0.94);
+}
 
-  .priest-reveal {
-    background: #1a2a3a;
-    border: 1px solid #1565c0;
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 0.85rem;
-    color: #90caf9;
-  }
+/* ─── Action panel (below cards) ───────────────────────────────── */
+#action-bar {
+  background: var(--felt-dark);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  min-height: 54px;
+}
+.action-btn {
+  appearance: none;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.action-btn:hover  { background: rgba(255,255,255,0.2); border-color: var(--gold); color: var(--gold); }
+.action-btn.target { border-color: var(--gold); color: var(--gold); }
+.action-btn.target:hover { background: var(--gold); color: var(--ink); }
+.action-btn.guess  { border-color: #90caf9; color: #90caf9; }
+.action-btn.guess:hover  { background: #1565c0; color: #fff; border-color: #1565c0; }
+.action-btn.forced { border-color: #f9a825; color: #f9a825; cursor: default; }
+.action-label {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+#error-bar {
+  color: #ef9a9a;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 4px 12px;
+  background: rgba(198,40,40,0.3);
+  border-radius: 6px;
+  display: none;
+}
+#error-bar.visible { display: block; }
+
+/* ─── Log panel (right side) ───────────────────────────────────── */
+#log-panel {
+  width: 280px;
+  flex-shrink: 0;
+  display: none;
+  flex-direction: column;
+  background: #fff;
+  border-left: 1px solid #ddd;
+}
+#log-panel.visible { display: flex; }
+#log-panel h2 {
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #888;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+#log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+#log .entry { padding: 2px 0; border-bottom: 1px solid #f0f0f0; color: #333; }
+#log .entry.hl { color: var(--red); font-weight: 700; }
+#log .entry.sep { color: #bbb; }
+#btn-log {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.6);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+#btn-log:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* ─── Forced draw notification ──────────────────────────────────── */
+#forced-draw {
+  position: absolute;
+  top: 12px; left: 50%; transform: translateX(-50%);
+  background: #1b5e20;
+  color: #a5d6a7;
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: none;
+  z-index: 10;
+}
 </style>
 </head>
 <body>
 
 <header>
   <h1>♥ LOVE LETTER</h1>
-  <div>
-    <span id="status-dot"></span>
-    <span id="status-text">Connecting…</span>
-  </div>
-  <button id="btn-new-game" disabled>New Game</button>
+  <span id="round-badge" class="badge">Round <span id="round-num">1</span></span>
+  <span id="deck-badge"  class="badge">Deck <span id="deck-num">?</span></span>
+  <button id="btn-new-game">New Game</button>
+  <button id="btn-log">Log</button>
+  <p id="status-msg">Start a new game to play.</p>
 </header>
 
 <main>
+  <section id="table-area">
+    <div id="forced-draw"></div>
+
+    <div class="table-grid">
+      <!-- AI slots -->
+      <div class="player-slot top"   id="slot-1"></div>
+      <div id="deck-area">
+        <div id="deck-pile-card"><img src="/images/back.png" alt="Deck"></div>
+        <div class="deck-label"><span id="deck-num-table">?</span> cards</div>
+      </div>
+      <div class="player-slot left"  id="slot-2"></div>
+      <div class="player-slot right" id="slot-3"></div>
+
+      <!-- Human hand -->
+      <div class="player-slot you" id="slot-0">
+        <div id="card-one-wrap"  class="card-wrap fly-in" data-slot="one"></div>
+        <div id="card-two-wrap"  class="card-wrap fly-in" data-slot="two"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="log-panel">
     <h2>Game Log</h2>
     <div id="log"></div>
   </section>
-
-  <section id="players-panel">
-    <h2>Players</h2>
-    <div id="players-list"></div>
-  </section>
-
-  <section id="action-panel">
-    <h2>Your Turn</h2>
-    <div id="action-inner">
-      <p id="waiting-msg">Start a new game to play.</p>
-    </div>
-  </section>
 </main>
 
+<div id="action-bar">
+  <span class="action-label" id="action-hint">Waiting…</span>
+</div>
+
 <script>
-// ── Card metadata ──────────────────────────────────────────────────────────
-const CARD_INFO = {
-  1: { name: 'Guard',    color: '#9e9e9e', desc: 'Name a non-Guard card. If correct, that player is out.' },
-  2: { name: 'Priest',   color: '#4caf50', desc: 'Look at another player\'s hand.' },
-  3: { name: 'Baron',    color: '#00bcd4', desc: 'Compare hands privately. Lower card is eliminated.' },
-  4: { name: 'Handmaid', color: '#ffeb3b', desc: 'You are immune until your next turn.' },
-  5: { name: 'Prince',   color: '#2196f3', desc: 'Choose any player (including yourself) to discard and redraw.' },
-  6: { name: 'King',     color: '#64b5f6', desc: 'Trade hands with another player.' },
-  7: { name: 'Countess', color: '#e040fb', desc: 'Must be discarded if you hold the King or Prince.' },
-  8: { name: 'Princess', color: '#f44336', desc: 'If discarded for any reason, you are out.' },
+'use strict';
+
+// ── Card image map (card value → image file) ──────────────────────────────
+const IMG = {
+  1: '/images/1.png',
+  2: '/images/2.png',
+  3: '/images/3.png',
+  4: '/images/4.png',
+  5: '/images/5.png',
+  6: '/images/6.png',
+  7: '/images/7.png',
+  8: '/images/8.png',
 };
+const CARD_NAMES = {
+  1:'Guard', 2:'Priest', 3:'Baron', 4:'Handmaid',
+  5:'Prince', 6:'King', 7:'Countess', 8:'Princess'
+};
+// Cards that target another player (not self)
+const NEEDS_TARGET = [1, 2, 3, 6];
+// Cards that can target self or others
+const CAN_TARGET_SELF = [5];
 
-// ── State ──────────────────────────────────────────────────────────────────
-let ws = null;
-let phase = 'lobby';       // lobby | waiting | choosingCard | choosingTarget | choosingGuess | gameOver
+// ── State ─────────────────────────────────────────────────────────────────
+let phase = 'lobby';          // lobby | waiting | choosingCard | choosingTarget | choosingGuess
 let selfId = 0;
-let pendingCardValue = null;
-let pendingTarget    = null;
-let pendingGuess     = null;
-let activePlayers    = [];
-let allPlayers       = [];
-let deckSize         = 0;
-let cardOne          = null;
-let cardTwo          = null;
-let countessForced   = false;
+let allPlayers = [];
+let deckSize = 0;
+let handCards = { one: null, two: null };
+let chosenCardValue = null;
+let chosenTarget = null;
+let countessForced = false;
+let ws = null;
 
-// ── DOM refs ───────────────────────────────────────────────────────────────
-const logEl        = document.getElementById('log');
-const playersEl    = document.getElementById('players-list');
-const actionInner  = document.getElementById('action-inner');
-const btnNewGame   = document.getElementById('btn-new-game');
-const statusDot    = document.getElementById('status-dot');
-const statusText   = document.getElementById('status-text');
+// ── DOM ───────────────────────────────────────────────────────────────────
+const btnNewGame  = document.getElementById('btn-new-game');
+const btnLog      = document.getElementById('btn-log');
+const logPanel    = document.getElementById('log-panel');
+const statusMsg   = document.getElementById('status-msg');
+const actionBar   = document.getElementById('action-bar');
+const logEl       = document.getElementById('log');
+const roundBadge  = document.getElementById('round-badge');
+const deckBadge   = document.getElementById('deck-badge');
+const deckNum     = document.getElementById('deck-num');
+const roundNum    = document.getElementById('round-num');
+const forcedDraw  = document.getElementById('forced-draw');
+const deckNumTable = document.getElementById('deck-num-table');
 
-// ── WebSocket ──────────────────────────────────────────────────────────────
-function connect() {
-  ws = new WebSocket('ws://localhost:8080');
+// ── Log toggle ────────────────────────────────────────────────────────────
+btnLog.addEventListener('click', () => {
+  logPanel.classList.toggle('visible');
+  logEl.scrollTop = logEl.scrollHeight;
+});
 
-  ws.onopen = () => {
-    statusDot.className = 'connected';
-    statusText.textContent = 'Connected';
-    btnNewGame.disabled = false;
-  };
+// ── Card DOM helpers ──────────────────────────────────────────────────────
+function makeCardInner(imgSrc, backOnly) {
+  const inner = document.createElement('div');
+  inner.className = 'card-inner';
 
-  ws.onclose = () => {
-    statusDot.className = '';
-    statusText.textContent = 'Disconnected — reload to reconnect';
-    btnNewGame.disabled = true;
-    phase = 'lobby';
-    renderAction();
-  };
+  const front = document.createElement('div');
+  front.className = 'card-face';
+  const frontImg = document.createElement('img');
+  frontImg.src = imgSrc || '/images/back.png';
+  front.appendChild(frontImg);
 
-  ws.onerror = () => {
-    statusText.textContent = 'Connection error';
-  };
+  const back = document.createElement('div');
+  back.className = 'card-back';
+  const backImg = document.createElement('img');
+  backImg.src = '/images/back.png';
+  back.appendChild(backImg);
 
-  ws.onmessage = (evt) => {
-    const msg = JSON.parse(evt.data);
-    handleMessage(msg);
-  };
+  inner.appendChild(front);
+  inner.appendChild(back);
+  if (backOnly) inner.classList.add('flipped'); // start face-down (showing card-back)
+  return inner;
 }
 
-function send(msg) {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg));
+function buildAISlot(slotEl, player) {
+  slotEl.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'card-wrap' + (player.eliminated ? ' eliminated' : '');
+  wrap.dataset.playerId = player.id;
+  wrap.appendChild(makeCardInner(null, true));
+  slotEl.appendChild(wrap);
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'player-name';
+  nameEl.innerHTML = player.name
+    + (player.protected  ? ' <span class="shield">🛡</span>' : '')
+    + (player.eliminated ? ' <span class="out">✗</span>'     : '');
+  slotEl.appendChild(nameEl);
+
+  if (player.discards.length) {
+    const row = document.createElement('div');
+    row.className = 'discards-row';
+    player.discards.forEach(d => {
+      const chip = document.createElement('div');
+      chip.className = 'discard-chip';
+      chip.textContent = d.name + '(' + d.value + ')';
+      row.appendChild(chip);
+    });
+    slotEl.appendChild(row);
   }
 }
 
-// ── Message handler ────────────────────────────────────────────────────────
-function handleMessage(msg) {
+function buildYourCard(wrapEl, card, faceUp) {
+  wrapEl.innerHTML = '';
+  wrapEl.dataset.cardValue = card ? card.value : '';
+  const inner = makeCardInner(card ? IMG[card.value] : null, !faceUp);
+  wrapEl.appendChild(inner);
+}
+
+// ── Card deal animation (deck → AI player slot) ───────────────────────────
+function animateCardDeal(targetSlotId) {
+  const deckCard = document.getElementById('deck-pile-card');
+  const slotEl   = document.getElementById(targetSlotId);
+  if (!deckCard || !slotEl) return;
+  const targetWrap = slotEl.querySelector('.card-wrap');
+  if (!targetWrap) return;
+
+  const deckRect   = deckCard.getBoundingClientRect();
+  const targetRect = targetWrap.getBoundingClientRect();
+
+  const flyCard = document.createElement('div');
+  flyCard.className = 'fly-card';
+  flyCard.style.left = deckRect.left + 'px';
+  flyCard.style.top  = deckRect.top  + 'px';
+  flyCard.appendChild(makeCardInner(null, true));
+  document.body.appendChild(flyCard);
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    flyCard.style.left = targetRect.left + 'px';
+    flyCard.style.top  = targetRect.top  + 'px';
+  }));
+
+  setTimeout(() => flyCard.remove(), 600);
+}
+
+// ── Fly-in animation for your cards ───────────────────────────────────────
+let flyInDone = false;
+function flyInCards() {
+  if (flyInDone) return;
+  flyInDone = true;
+  ['card-one-wrap', 'card-two-wrap'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    setTimeout(() => el.classList.remove('fly-in'), i * 300 + 200);
+  });
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────
+function connect() {
+  ws = new WebSocket('ws://localhost:8080');
+  ws.onopen  = () => setStatus('Connected — click New Game to play.');
+  ws.onclose = () => { setStatus('Disconnected.'); btnNewGame.disabled = true; };
+  ws.onerror = () => setStatus('Connection error.');
+  ws.onmessage = e => handle(JSON.parse(e.data));
+}
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
+
+// ── Message handler ───────────────────────────────────────────────────────
+function handle(msg) {
   switch (msg.type) {
 
     case 'gameStarted':
       selfId = msg.selfId;
-      addLog('⚑ Game started — you are ' + msg.players[selfId], 'highlight');
+      allPlayers = msg.players.map((name, i) => ({
+        id: i, name, eliminated: false, protected: false, discards: []
+      }));
+      roundBadge.style.display = 'inline';
+      deckBadge.style.display  = 'inline';
       phase = 'waiting';
-      pendingCardValue = pendingTarget = pendingGuess = null;
+      renderTable();
       renderAction();
-      break;
-
-    case 'log':
-      addLog(msg.message);
+      addLog('⚑ Game started.', 'hl');
+      flyInCards();
       break;
 
     case 'stateUpdate':
       allPlayers = msg.players;
       deckSize   = msg.deckSize;
-      renderPlayers();
+      deckNum.textContent = deckSize;
+      deckNumTable.textContent = deckSize;
+      document.getElementById('deck-pile-card').style.opacity = deckSize === 0 ? '0.3' : '1';
+      renderTable();
+      break;
+
+    case 'turnStart': {
+      const aiSlot = AI_SLOTS.find(s => s.playerId === msg.playerId);
+      if (aiSlot) animateCardDeal(aiSlot.slotId);
+      break;
+    }
+
+    case 'log':
+      addLog(msg.message, msg.message.startsWith('—') ? 'sep' : '');
       break;
 
     case 'yourTurn':
-      selfId       = msg.selfId;
-      cardOne      = msg.cardOne;
-      cardTwo      = msg.cardTwo;
-      activePlayers = msg.activePlayers;
+      handCards     = { one: msg.cardOne, two: msg.cardTwo };
       countessForced = msg.countessForced;
-      pendingCardValue = null;
-      pendingTarget    = null;
-      pendingGuess     = null;
+      chosenCardValue = chosenTarget = null;
       phase = 'choosingCard';
       clearError();
+      clearForcedDraw();
+      renderHand(true);
       renderAction();
-      addLog('▶ Your turn.', 'highlight');
+      addLog('▶ Your turn.', 'hl');
+      setStatus('Your turn — choose a card to play.');
       break;
 
     case 'error':
       showError(msg.message);
-      // A new yourTurn will follow — it resets the phase
+      // A new yourTurn follows; until then leave action bar showing error
       break;
 
     case 'forcedDraw':
-      showForcedDraw('You discarded and drew: ' + msg.newCard.name + ' (' + msg.newCard.value + ')');
+      showForcedDraw('You drew: ' + msg.newCard.name + ' (' + msg.newCard.value + ')');
       break;
 
     case 'gameOver':
-      phase = 'gameOver';
+      phase = 'lobby';
       btnNewGame.disabled = false;
-      addLog('⬛ Round over.', 'highlight');
+      renderHand(false);
       renderAction();
+      addLog('■ Round over.', 'hl');
+      setStatus('Round over — start a new game.');
       break;
   }
 }
 
-// ── Log ────────────────────────────────────────────────────────────────────
-function addLog(text, cls) {
-  if (text.startsWith('——') || text.startsWith('===')) {
-    const sep = document.createElement('div');
-    sep.className = 'entry sep';
-    sep.textContent = text;
-    logEl.appendChild(sep);
-  } else {
-    const div = document.createElement('div');
-    div.className = 'entry' + (cls ? ' ' + cls : '');
-    div.textContent = text;
-    logEl.appendChild(div);
+// ── Table render ──────────────────────────────────────────────────────────
+const AI_SLOTS = [
+  { slotId: 'slot-1', playerId: 1 },
+  { slotId: 'slot-2', playerId: 2 },
+  { slotId: 'slot-3', playerId: 3 },
+];
+
+function renderTable() {
+  AI_SLOTS.forEach(({ slotId, playerId }) => {
+    const p = allPlayers.find(p => p.id === playerId);
+    if (p) buildAISlot(document.getElementById(slotId), p);
+  });
+  // Attach target click handlers if in choosingTarget phase
+  if (phase === 'choosingTarget') attachTargetHandlers();
+}
+
+function renderHand(faceUp) {
+  const one = document.getElementById('card-one-wrap');
+  const two = document.getElementById('card-two-wrap');
+  buildYourCard(one, handCards.one, faceUp);
+  buildYourCard(two, handCards.two, faceUp);
+  one.classList.remove('selectable', 'selected', 'target-eligible', 'forced');
+  two.classList.remove('selectable', 'selected', 'target-eligible', 'forced');
+}
+
+// ── Action bar render ─────────────────────────────────────────────────────
+function renderAction() {
+  actionBar.innerHTML = '';
+
+  if (phase === 'lobby' || phase === 'gameOver') {
+    hint('Start a new game to play.');
+    return;
   }
+  if (phase === 'waiting') {
+    hint('Waiting for other players…');
+    return;
+  }
+  if (phase === 'choosingCard') {
+    if (countessForced) {
+      actionBar.innerHTML = '<span class="action-label">You must play the <strong>Countess</strong> (holding King or Prince).</span>';
+      const btn = document.createElement('button');
+      btn.className = 'action-btn forced';
+      btn.textContent = 'Play Countess (7)';
+      actionBar.appendChild(btn);
+      // Mark the Countess card visually and auto-select it
+      markForcedCountess();
+      autoPlayCountess();
+    } else {
+      hint('Choose a card from your hand to play.');
+      attachCardSelectHandlers();
+    }
+    return;
+  }
+  if (phase === 'choosingTarget') {
+    const info = CARD_NAMES[chosenCardValue] || ('Card ' + chosenCardValue);
+    hint('Playing ' + info + ' — choose a target:');
+    renderTargetButtons();
+    return;
+  }
+  if (phase === 'choosingGuess') {
+    hint('Guard — guess the card:');
+    [2,3,4,5,6,7,8].forEach(v => {
+      const btn = document.createElement('button');
+      btn.className = 'action-btn guess';
+      btn.textContent = v + ' ' + CARD_NAMES[v];
+      btn.onclick = () => { submitMove(chosenCardValue, chosenTarget, v); };
+      actionBar.appendChild(btn);
+    });
+    return;
+  }
+}
+
+function hint(text) {
+  const lbl = document.createElement('span');
+  lbl.className = 'action-label';
+  lbl.id = 'action-hint';
+  lbl.innerHTML = text;
+  actionBar.appendChild(lbl);
+}
+
+// ── Card selection (your hand) ────────────────────────────────────────────
+function attachCardSelectHandlers() {
+  ['card-one-wrap', 'card-two-wrap'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.add('selectable');
+    el.onclick = () => onCardChosen(parseInt(el.dataset.cardValue));
+  });
+}
+
+function markForcedCountess() {
+  ['card-one-wrap', 'card-two-wrap'].forEach(id => {
+    const el = document.getElementById(id);
+    if (parseInt(el.dataset.cardValue) === 7) el.classList.add('forced');
+  });
+}
+
+function autoPlayCountess() {
+  setTimeout(() => {
+    chosenCardValue = 7;
+    // Countess needs no target
+    phase = 'waiting';
+    renderHand(false);
+    renderAction();
+    send({ type: 'move', cardValue: 7, target: -1, guess: 0 });
+  }, 800);
+}
+
+function onCardChosen(value) {
+  chosenCardValue = value;
+  // Highlight selected card
+  ['card-one-wrap', 'card-two-wrap'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('selectable', 'selected');
+    if (parseInt(el.dataset.cardValue) === value) el.classList.add('selected');
+  });
+
+  if (NEEDS_TARGET.includes(value) || CAN_TARGET_SELF.includes(value)) {
+    phase = 'choosingTarget';
+    renderAction();
+    attachTargetHandlers();
+    setStatus('Choose a target.');
+  } else {
+    // Handmaid (4), Countess (7), Princess (8) — no target needed
+    phase = 'waiting';
+    renderHand(false);
+    renderAction();
+    send({ type: 'move', cardValue: value, target: -1, guess: 0 });
+  }
+}
+
+// ── Target selection (AI card areas) ─────────────────────────────────────
+function attachTargetHandlers() {
+  const selfPlayer = allPlayers.find(p => p.id === selfId);
+  AI_SLOTS.forEach(({ slotId, playerId }) => {
+    const p = allPlayers.find(p => p.id === playerId);
+    if (!p || p.eliminated) return;
+    const slot = document.getElementById(slotId);
+    const wrap = slot.querySelector('.card-wrap');
+    if (!wrap) return;
+    wrap.classList.add('target-eligible');
+    wrap.onclick = () => onTargetChosen(playerId);
+  });
+  // Prince can target self
+  if (CAN_TARGET_SELF.includes(chosenCardValue)) {
+    ['card-one-wrap', 'card-two-wrap'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.add('target-eligible');
+      el.onclick = () => onTargetChosen(selfId);
+    });
+  }
+}
+
+function renderTargetButtons() {
+  AI_SLOTS.forEach(({ playerId }) => {
+    const p = allPlayers.find(p => p.id === playerId);
+    if (!p || p.eliminated) return;
+    const btn = document.createElement('button');
+    btn.className = 'action-btn target';
+    btn.textContent = p.name + (p.protected ? ' 🛡' : '');
+    btn.onclick = () => onTargetChosen(playerId);
+    actionBar.appendChild(btn);
+  });
+  if (CAN_TARGET_SELF.includes(chosenCardValue)) {
+    const btn = document.createElement('button');
+    btn.className = 'action-btn target';
+    btn.textContent = 'Yourself';
+    btn.onclick = () => onTargetChosen(selfId);
+    actionBar.appendChild(btn);
+  }
+}
+
+function onTargetChosen(targetId) {
+  chosenTarget = targetId;
+  // Remove target highlight from AI slots
+  AI_SLOTS.forEach(({ slotId }) => {
+    const wrap = document.getElementById(slotId).querySelector('.card-wrap');
+    if (wrap) { wrap.classList.remove('target-eligible'); wrap.onclick = null; }
+  });
+  ['card-one-wrap', 'card-two-wrap'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('target-eligible', 'selectable');
+    el.onclick = null;
+  });
+
+  if (chosenCardValue === 1) {
+    phase = 'choosingGuess';
+    renderAction();
+    setStatus('Guess the card value.');
+  } else {
+    submitMove(chosenCardValue, targetId, 0);
+  }
+}
+
+function submitMove(cardValue, target, guess) {
+  phase = 'waiting';
+  renderHand(false);
+  renderAction();
+  setStatus('Waiting…');
+  send({ type: 'move', cardValue, target: target ?? -1, guess: guess ?? 0 });
+  chosenCardValue = chosenTarget = null;
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────
+function addLog(text, cls) {
+  const div = document.createElement('div');
+  div.className = 'entry' + (cls ? ' ' + cls : '');
+  div.textContent = text;
+  logEl.appendChild(div);
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-// ── Players panel ──────────────────────────────────────────────────────────
-function renderPlayers() {
-  if (!allPlayers.length) { playersEl.innerHTML = ''; return; }
-  playersEl.innerHTML = allPlayers.map(p => {
-    const isSelf = p.id === selfId;
-    const discStr = p.discards.length
-      ? p.discards.map(d => d.name + '(' + d.value + ')').join(', ')
-      : '—';
-    const badges = [];
-    if (isSelf) badges.push('<span class="badge self-badge">You</span>');
-    if (p.protected)  badges.push('<span class="badge protected">Shielded</span>');
-    if (p.eliminated) badges.push('<span class="badge eliminated">Out</span>');
-    return `
-      <div class="player-card ${isSelf ? 'self' : ''} ${p.eliminated ? 'eliminated' : ''}">
-        <div class="p-name">${p.name}${badges.join('')}</div>
-        <div class="p-discards">Discards: ${discStr}</div>
-      </div>`;
-  }).join('');
-}
+// ── Status & error ────────────────────────────────────────────────────────
+function setStatus(text) { statusMsg.textContent = text; }
 
-// ── Action panel ───────────────────────────────────────────────────────────
 function clearError() {
-  const box = document.getElementById('error-box');
-  if (box) { box.className = ''; box.textContent = ''; }
+  const box = actionBar.querySelector('#error-bar');
+  if (box) box.remove();
 }
-
 function showError(msg) {
-  let box = document.getElementById('error-box');
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'error-box';
-    actionInner.prepend(box);
-  }
+  clearError();
+  const box = document.createElement('div');
+  box.id = 'error-bar';
   box.className = 'visible';
   box.textContent = '⚠ ' + msg;
+  actionBar.prepend(box);
+  setStatus('⚠ ' + msg + ' — choose again.');
 }
 
 function showForcedDraw(msg) {
-  let box = document.getElementById('forced-draw-box');
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'forced-draw-box';
-    actionInner.prepend(box);
-  }
-  box.className = 'visible';
-  box.textContent = '↩ ' + msg;
-  setTimeout(() => { box.className = ''; }, 5000);
+  forcedDraw.textContent = msg;
+  forcedDraw.style.display = 'block';
+  setTimeout(() => { forcedDraw.style.display = 'none'; }, 5000);
 }
+function clearForcedDraw() { forcedDraw.style.display = 'none'; }
 
-function cardButtonHTML(card, forced) {
-  const info = CARD_INFO[card.value] || { name: card.name, color: '#999', desc: '' };
-  const cls  = forced ? 'card-btn forced' : 'card-btn';
-  return `
-    <button class="${cls}" data-value="${card.value}" style="border-color:${forced ? '#f9a825' : ''}">
-      <div class="card-value" style="color:${info.color}">${card.value}</div>
-      <div class="card-info">
-        <div class="card-name">${info.name}</div>
-        <div class="card-desc">${info.desc}</div>
-      </div>
-    </button>`;
-}
-
-function renderAction() {
-  actionInner.innerHTML = '';
-
-  // Preserve error/forced-draw boxes across re-renders
-  const errBox = document.getElementById('error-box');
-  const fdBox  = document.getElementById('forced-draw-box');
-
-  switch (phase) {
-
-    case 'lobby':
-    case 'gameOver': {
-      const msg = document.createElement('p');
-      msg.id = 'waiting-msg';
-      msg.textContent = phase === 'gameOver' ? 'Round over. Start a new game!' : 'Start a new game to play.';
-      actionInner.appendChild(msg);
-      break;
-    }
-
-    case 'waiting': {
-      const msg = document.createElement('p');
-      msg.id = 'waiting-msg';
-      msg.textContent = 'Waiting for other players…';
-      actionInner.appendChild(msg);
-      break;
-    }
-
-    case 'choosingCard': {
-      if (countessForced) {
-        const note = document.createElement('div');
-        note.className = 'action-section';
-        note.innerHTML = '<h3>Must play</h3><p style="font-size:0.82rem;color:#f9a825;margin-bottom:8px">You hold Countess with King or Prince — you must discard the Countess.</p>';
-        const forced = (cardOne.value === 7) ? cardOne : cardTwo;
-        note.innerHTML += cardButtonHTML(forced, true);
-        actionInner.appendChild(note);
-
-        // Auto-select Countess and proceed
-        pendingCardValue = 7;
-        const cardNeeds = needsTarget(7);
-        if (!cardNeeds) {
-          phase = 'choosingCard'; // will auto-submit below
-          submitMove();
-        } else {
-          phase = 'choosingTarget';
-          renderAction();
-        }
-      } else {
-        const sec = document.createElement('div');
-        sec.className = 'action-section';
-        sec.innerHTML = '<h3>Choose a card to play</h3>';
-        sec.innerHTML += cardButtonHTML(cardOne, false);
-        sec.innerHTML += cardButtonHTML(cardTwo, false);
-        actionInner.appendChild(sec);
-
-        actionInner.querySelectorAll('.card-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            pendingCardValue = parseInt(btn.dataset.value);
-            if (needsTarget(pendingCardValue)) {
-              phase = 'choosingTarget';
-            } else {
-              phase = 'choosingGuess'; // only Guard, but guard needs target first
-              // guard is handled in choosingTarget → choosingGuess flow
-              // For no-target cards: submit directly
-              submitMove();
-              return;
-            }
-            renderAction();
-          });
-        });
-      }
-      break;
-    }
-
-    case 'choosingTarget': {
-      const sec = document.createElement('div');
-      sec.className = 'action-section';
-      const info = CARD_INFO[pendingCardValue] || {};
-      sec.innerHTML = `<h3>Playing: ${info.name || pendingCardValue}</h3><p style="font-size:0.82rem;color:#999;margin-bottom:8px">${info.desc || ''}</p><h3>Choose a target</h3>`;
-
-      const canSelf = pendingCardValue === 5; // Prince can target self
-      const targets = activePlayers.filter(p => canSelf ? true : p.id !== selfId);
-
-      targets.forEach(p => {
-        const btn = document.createElement('button');
-        btn.className = 'target-btn' + (p.protected ? ' protected-target' : '');
-        btn.textContent = p.name + (p.id === selfId ? ' (you)' : '') + (p.protected ? ' 🛡' : '');
-        btn.addEventListener('click', () => {
-          pendingTarget = p.id;
-          if (pendingCardValue === 1) {
-            phase = 'choosingGuess';
-          } else {
-            submitMove();
-            return;
-          }
-          renderAction();
-        });
-        sec.appendChild(btn);
-      });
-
-      actionInner.appendChild(sec);
-      break;
-    }
-
-    case 'choosingGuess': {
-      const sec = document.createElement('div');
-      sec.className = 'action-section';
-      sec.innerHTML = '<h3>Guard — guess the card</h3><p style="font-size:0.82rem;color:#999;margin-bottom:8px">You cannot guess Guard (1).</p>';
-      [2,3,4,5,6,7,8].forEach(v => {
-        const btn = document.createElement('button');
-        btn.className = 'guess-btn';
-        const ci = CARD_INFO[v];
-        btn.textContent = v + ' — ' + (ci ? ci.name : '?');
-        btn.addEventListener('click', () => {
-          pendingGuess = v;
-          submitMove();
-        });
-        sec.appendChild(btn);
-      });
-      actionInner.appendChild(sec);
-      break;
-    }
-  }
-
-  // Re-inject persistent boxes at the top
-  if (errBox && errBox.className === 'visible') actionInner.prepend(errBox);
-  if (fdBox  && fdBox.className  === 'visible') actionInner.prepend(fdBox);
-}
-
-// Cards that require choosing a target (1=Guard, 2=Priest, 3=Baron, 5=Prince, 6=King)
-function needsTarget(v) {
-  return [1, 2, 3, 5, 6].includes(v);
-}
-
-function submitMove() {
-  phase = 'waiting';
-  send({
-    type:      'move',
-    cardValue: pendingCardValue,
-    target:    pendingTarget  ?? -1,
-    guess:     pendingGuess   ?? 0
-  });
-  pendingCardValue = pendingTarget = pendingGuess = null;
-  renderAction();
-}
-
-// ── Button ─────────────────────────────────────────────────────────────────
+// ── New Game button ───────────────────────────────────────────────────────
 btnNewGame.addEventListener('click', () => {
   btnNewGame.disabled = true;
   logEl.innerHTML = '';
-  playersEl.innerHTML = '';
   allPlayers = [];
+  handCards = { one: null, two: null };
   phase = 'waiting';
+  flyInDone = false;
+  // Clear slots
+  ['slot-0','slot-1','slot-2','slot-3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
+  // Rebuild your card placeholders
+  const s0 = document.getElementById('slot-0');
+  const oneWrap = document.createElement('div');
+  oneWrap.id = 'card-one-wrap';
+  oneWrap.className = 'card-wrap fly-in';
+  oneWrap.dataset.slot = 'one';
+  const twoWrap = document.createElement('div');
+  twoWrap.id = 'card-two-wrap';
+  twoWrap.className = 'card-wrap fly-in';
+  twoWrap.dataset.slot = 'two';
+  s0.appendChild(oneWrap);
+  s0.appendChild(twoWrap);
+
   renderAction();
   send({ type: 'createGame' });
 });
 
-// ── Boot ───────────────────────────────────────────────────────────────────
+// ── Boot ──────────────────────────────────────────────────────────────────
 connect();
 renderAction();
 </script>

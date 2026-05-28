@@ -29,6 +29,16 @@ export class Game {
         this.onActionCallback = fn;
     }
 
+    private onTurnStartCallback: ((playerId: number) => void) | null = null;
+
+    setOnTurnStart(fn: (playerId: number) => void): void {
+        this.onTurnStartCallback = fn;
+    }
+
+    notifyTurnStart(playerId: number): void {
+        if (this.onTurnStartCallback) this.onTurnStartCallback(playerId);
+    }
+
     addPlayer(player: Player) {
         this.players.push(player);
     }

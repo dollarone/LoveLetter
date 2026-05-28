@@ -15,12 +15,15 @@ export class SimpleAIPlayer extends Player {
         this.targetPlayerIndex = -1;
     }
     async itsYourTurn(): Promise<boolean> {
+        this.game.notifyTurnStart(this.playerId);
+        await new Promise(r => setTimeout(r, 700));
         this.drawCard();
         let code: number = this.game.playCard(this);
         while (code != ReturnCodes.SUCCESS) {
             this.override = true;
             code = this.game.playCard(this);
         }
+        await new Promise(r => setTimeout(r, 900));
         return true;
     }
 

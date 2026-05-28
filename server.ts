@@ -1,12 +1,50 @@
-import WebSocket, { WebSocketServer } from 'ws';
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { WebSocketServer } from 'ws';
+import WebSocket from 'ws';
 import { Game } from './game';
 import { SimpleAIPlayer } from './simpleAIplayer';
 import { WebSocketPlayer, ClientMove } from './webSocketPlayer';
 
 const PORT = 8080;
-const wss = new WebSocketServer({ port: PORT });
+const ROOT = __dirname;
 
-console.log(`Love Letter server listening on ws://localhost:${PORT}`);
+// ── Static file server ────────────────────────────────────────────────────
+const MIME: Record<string, string> = {
+    '.html': 'text/html',
+    '.js':   'application/javascript',
+    '.css':  'text/css',
+    '.png':  'image/png',
+    '.jpg':  'image/jpeg',
+};
+
+const httpServer = http.createServer((req, res) => {
+    let urlPath = req.url || '/';
+    if (urlPath === '/') urlPath = '/client.html';
+
+    const filePath = path.join(ROOT, urlPath);
+    const ext = path.extname(filePath).toLowerCase();
+    const mime = MIME[ext] || 'application/octet-stream';
+
+    fs.readFile(filePath, (err, data) => {
+        if (err) {
+            res.writeHead(404);
+            res.end('Not found');
+        } else {
+            res.writeHead(200, { 'Content-Type': mime });
+            res.end(data);
+        }
+    });
+});
+
+// ── WebSocket server ──────────────────────────────────────────────────────
+const wss = new WebSocketServer({ server: httpServer });
+
+httpServer.listen(PORT, () => {
+    console.log(`Love Letter server running.`);
+    console.log(`  Open http://localhost:${PORT} in your browser.`);
+});
 
 function stripAnsi(s: string): string {
     return s.replace(/\x1b\[[0-9;]*m/g, '');
@@ -51,6 +89,10 @@ wss.on('connection', (ws: WebSocket) => {
             });
         });
 
+        game.setOnTurnStart((playerId: number) => {
+            send({ type: 'turnStart', playerId });
+        });
+
         send({
             type: 'gameStarted',
             selfId: 0,
@@ -70,22 +112,17 @@ wss.on('connection', (ws: WebSocket) => {
 
     ws.on('message', (data: Buffer) => {
         let msg: any;
-        try {
-            msg = JSON.parse(data.toString());
-        } catch {
-            console.warn('Received non-JSON message');
-            return;
-        }
+        try { msg = JSON.parse(data.toString()); }
+        catch { console.warn('Non-JSON message received'); return; }
 
         if (msg.type === 'createGame') {
             startGame();
         } else if (msg.type === 'move' && wsPlayer) {
-            const move: ClientMove = {
+            wsPlayer.receiveMove({
                 cardValue: msg.cardValue,
                 target:    msg.target   ?? -1,
                 guess:     msg.guess    ?? 0
-            };
-            wsPlayer.receiveMove(move);
+            } as ClientMove);
         }
     });
 
@@ -95,7 +132,5 @@ wss.on('connection', (ws: WebSocket) => {
         gameRunning = false;
     });
 
-    ws.on('error', (err) => {
-        console.error('WebSocket error:', err.message);
-    });
+    ws.on('error', (err) => console.error('WS error:', err.message));
 });

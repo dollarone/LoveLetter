@@ -4,7 +4,12 @@
       "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\vario\\\\code\\\\Love Letter CS\" -Recurse -File | Select-Object FullName | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"c:\\\\Users\\\\vario\\\\code\\\\Love Letter CS\"\\), \".\" })",
       "Bash(npm install *)",
       "Bash(tsc)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\vario\\\\code\\\\Love Letter\" -Recurse -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(find \"c:/Users/vario/code/Love Letter\" -type f | head -100)",
+      "Read(//c/Users/vario/code/Love Letter/**)"
     ]
   }
 }

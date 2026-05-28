@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -68,14 +35,52 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-var ws_1 = __importStar(require("ws"));
+var http_1 = __importDefault(require("http"));
+var fs_1 = __importDefault(require("fs"));
+var path_1 = __importDefault(require("path"));
+var ws_1 = require("ws");
+var ws_2 = __importDefault(require("ws"));
 var game_1 = require("./game");
 var simpleAIplayer_1 = require("./simpleAIplayer");
 var webSocketPlayer_1 = require("./webSocketPlayer");
 var PORT = 8080;
-var wss = new ws_1.WebSocketServer({ port: PORT });
-console.log("Love Letter server listening on ws://localhost:".concat(PORT));
+var ROOT = __dirname;
+// ── Static file server ────────────────────────────────────────────────────
+var MIME = {
+    '.html': 'text/html',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+};
+var httpServer = http_1.default.createServer(function (req, res) {
+    var urlPath = req.url || '/';
+    if (urlPath === '/')
+        urlPath = '/client.html';
+    var filePath = path_1.default.join(ROOT, urlPath);
+    var ext = path_1.default.extname(filePath).toLowerCase();
+    var mime = MIME[ext] || 'application/octet-stream';
+    fs_1.default.readFile(filePath, function (err, data) {
+        if (err) {
+            res.writeHead(404);
+            res.end('Not found');
+        }
+        else {
+            res.writeHead(200, { 'Content-Type': mime });
+            res.end(data);
+        }
+    });
+});
+// ── WebSocket server ──────────────────────────────────────────────────────
+var wss = new ws_1.WebSocketServer({ server: httpServer });
+httpServer.listen(PORT, function () {
+    console.log("Love Letter server running.");
+    console.log("  Open http://localhost:".concat(PORT, " in your browser."));
+});
 function stripAnsi(s) {
     return s.replace(/\x1b\[[0-9;]*m/g, '');
 }
@@ -84,7 +89,7 @@ wss.on('connection', function (ws) {
     var wsPlayer = null;
     var gameRunning = false;
     function send(msg) {
-        if (ws.readyState === ws_1.default.OPEN) {
+        if (ws.readyState === ws_2.default.OPEN) {
             ws.send(JSON.stringify(msg));
         }
     }
@@ -115,6 +120,9 @@ wss.on('connection', function (ws) {
                                 players: game.getAllPlayers(),
                                 deckSize: game.getDeckSize()
                             });
+                        });
+                        game.setOnTurnStart(function (playerId) {
+                            send({ type: 'turnStart', playerId: playerId });
                         });
                         send({
                             type: 'gameStarted',
@@ -148,19 +156,18 @@ wss.on('connection', function (ws) {
             msg = JSON.parse(data.toString());
         }
         catch (_c) {
-            console.warn('Received non-JSON message');
+            console.warn('Non-JSON message received');
             return;
         }
         if (msg.type === 'createGame') {
             startGame();
         }
         else if (msg.type === 'move' && wsPlayer) {
-            var move = {
+            wsPlayer.receiveMove({
                 cardValue: msg.cardValue,
                 target: (_a = msg.target) !== null && _a !== void 0 ? _a : -1,
                 guess: (_b = msg.guess) !== null && _b !== void 0 ? _b : 0
-            };
-            wsPlayer.receiveMove(move);
+            });
         }
     });
     ws.on('close', function () {
@@ -168,8 +175,6 @@ wss.on('connection', function (ws) {
         wsPlayer = null;
         gameRunning = false;
     });
-    ws.on('error', function (err) {
-        console.error('WebSocket error:', err.message);
-    });
+    ws.on('error', function (err) { return console.error('WS error:', err.message); });
 });
 //# sourceMappingURL=server.js.map

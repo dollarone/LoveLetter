@@ -70,13 +70,23 @@ var SimpleAIPlayer = /** @class */ (function (_super) {
         return __awaiter(this, void 0, void 0, function () {
             var code;
             return __generator(this, function (_a) {
-                this.drawCard();
-                code = this.game.playCard(this);
-                while (code != returncodes_1.ReturnCodes.SUCCESS) {
-                    this.override = true;
-                    code = this.game.playCard(this);
+                switch (_a.label) {
+                    case 0:
+                        this.game.notifyTurnStart(this.playerId);
+                        return [4 /*yield*/, new Promise(function (r) { return setTimeout(r, 700); })];
+                    case 1:
+                        _a.sent();
+                        this.drawCard();
+                        code = this.game.playCard(this);
+                        while (code != returncodes_1.ReturnCodes.SUCCESS) {
+                            this.override = true;
+                            code = this.game.playCard(this);
+                        }
+                        return [4 /*yield*/, new Promise(function (r) { return setTimeout(r, 900); })];
+                    case 2:
+                        _a.sent();
+                        return [2 /*return*/, true];
                 }
-                return [2 /*return*/, true];
             });
         });
     };

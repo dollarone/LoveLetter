@@ -49,6 +49,7 @@ var Game = /** @class */ (function () {
         this.playersLeft = 0;
         this.playersStillInRound = [];
         this.onActionCallback = null;
+        this.onTurnStartCallback = null;
         this.playerCount = playerCount;
         this.logger = logger || (function (msg) { return console.log(msg); });
     }
@@ -57,6 +58,13 @@ var Game = /** @class */ (function () {
     };
     Game.prototype.setOnAction = function (fn) {
         this.onActionCallback = fn;
+    };
+    Game.prototype.setOnTurnStart = function (fn) {
+        this.onTurnStartCallback = fn;
+    };
+    Game.prototype.notifyTurnStart = function (playerId) {
+        if (this.onTurnStartCallback)
+            this.onTurnStartCallback(playerId);
     };
     Game.prototype.addPlayer = function (player) {
         this.players.push(player);
